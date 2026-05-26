@@ -7,6 +7,39 @@ from PySide6.QtCore import Qt
 from core.game_state import GameState
 from core.task_system import TaskSystem
 
+CARD_STYLE = """
+QFrame {
+    background: #f8f8f8;
+    border: 1px solid #d9d9d9;
+    border-radius: 8px;
+    padding: 8px;
+    margin: 4px;
+}
+QLabel {
+    color: #222222;
+    background: transparent;
+}
+"""
+
+DIALOG_STYLE = """
+QDialog, QScrollArea, QWidget {
+    background: #303030;
+    color: #ffffff;
+}
+QLabel {
+    color: #ffffff;
+}
+QPushButton {
+    min-height: 28px;
+    padding: 4px 12px;
+}
+QPushButton:disabled {
+    color: #777777;
+    background: #eeeeee;
+    border: 1px solid #cccccc;
+}
+"""
+
 
 class WorkDialog(QDialog):
     def __init__(self, state: GameState, parent=None):
@@ -16,6 +49,7 @@ class WorkDialog(QDialog):
         self.setWindowTitle("选择工作")
         self.setMinimumWidth(350)
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
+        self.setStyleSheet(DIALOG_STYLE)
         self._init_ui()
 
     def _init_ui(self):
@@ -47,13 +81,13 @@ class WorkDialog(QDialog):
     def _create_job_card(self, job: dict) -> QFrame:
         card = QFrame()
         card.setFrameStyle(QFrame.StyledPanel)
-        card.setStyleSheet("QFrame { background: #f8f8f8; border-radius: 8px; padding: 8px; margin: 4px; }")
+        card.setStyleSheet(CARD_STYLE)
 
         row = QHBoxLayout(card)
 
         mins = job["duration"] // 60
         info = QLabel(f"{job['name']}\n学识要求：{job['knowledge']} | 时长：{mins}分钟 | 收益：{job['reward']}G")
-        info.setStyleSheet("font-size: 13px;")
+        info.setStyleSheet("font-size: 13px; color: #222222;")
         row.addWidget(info)
 
         row.addStretch()

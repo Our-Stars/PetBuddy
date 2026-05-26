@@ -11,13 +11,16 @@ PROJECT_DIR = os.path.abspath(
 sys.path.insert(0, PROJECT_DIR)
 
 from PySide6.QtCore import QPoint
-from PySide6.QtWidgets import QApplication
+from PySide6.QtGui import QImage, QPainter
+from PySide6.QtWidgets import QApplication, QLabel, QPushButton
 
 from core.game_state import GameState, PetStatus
 from storage.save_manager import SaveManager
 from ui.pet_window import PetWindow
 from ui.settings_dialog import SettingsDialog
 from ui.shop_dialog import ShopDialog
+from ui.status_panel import StatusPanel
+from ui.work_dialog import WorkDialog
 
 
 class CountingSaveManager:
@@ -90,6 +93,17 @@ class PetWindowTest(unittest.TestCase):
         self.assertEqual(state.status, PetStatus.WORKING)
         self.assertEqual(state.current_task, "捡瓶子")
 
+    def test_expression_render_paths_do_not_raise(self):
+        self.window = self._make_window(GameState())
+        image = QImage(150, 150, QImage.Format_ARGB32)
+        painter = QPainter(image)
+
+        try:
+            self.window._draw_expression(painter, PetStatus.HAPPY, 80, 80)
+            self.window._draw_expression(painter, PetStatus.WORKING, 80, 80)
+        finally:
+            painter.end()
+
     def test_saved_position_is_clamped_to_screen_on_load(self):
         state = GameState(position_x=100000, position_y=100000)
         self.window = self._make_window(state)
@@ -118,6 +132,28 @@ class PetWindowTest(unittest.TestCase):
         self.assertEqual(manager.save_count, 1)
         dialog.close()
 
+    def test_shop_dialog_contains_readable_item_text_and_buttons(self):
+        dialog = ShopDialog(GameState(coins=100))
+
+        labels = [label.text() for label in dialog.findChildren(QLabel)]
+        buttons = [button.text() for button in dialog.findChildren(QPushButton)]
+
+        self.assertTrue(any("普通食物" in text for text in labels))
+        self.assertTrue(any("价格：20 金币" in text for text in labels))
+        self.assertTrue(any("购买（20G）" in text for text in buttons))
+        dialog.close()
+
+    def test_work_dialog_contains_readable_job_text_and_buttons(self):
+        dialog = WorkDialog(GameState(knowledge=1))
+
+        labels = [label.text() for label in dialog.findChildren(QLabel)]
+        buttons = [button.text() for button in dialog.findChildren(QPushButton)]
+
+        self.assertTrue(any("捡瓶子" in text for text in labels))
+        self.assertTrue(any("收益：20G" in text for text in labels))
+        self.assertTrue(any("开始工作" in text for text in buttons))
+        dialog.close()
+
     def test_settings_change_saves_immediately(self):
         manager = CountingSaveManager()
         state = GameState(always_on_top=True)
@@ -141,6 +177,21 @@ class PetWindowTest(unittest.TestCase):
         self.assertEqual(state.coins, 0)
         self.assertEqual(state.mood, 80)
         self.assertEqual(state.satiety, 80)
+        self.assertEqual(manager.save_count, 1)
+        dialog.close()
+
+    def test_status_panel_cancel_task_saves_and_refreshes(self):
+        manager = CountingSaveManager()
+        state = GameState(status=PetStatus.STUDYING, current_task="学习", task_remaining_seconds=30)
+        dialog = StatusPanel(state, manager)
+
+        self.assertTrue(dialog.btn_cancel_task.isEnabled())
+        dialog._cancel_current_task()
+
+        self.assertIsNone(state.current_task)
+        self.assertEqual(state.task_remaining_seconds, 0)
+        self.assertEqual(state.status, PetStatus.IDLE)
+        self.assertFalse(dialog.btn_cancel_task.isEnabled())
         self.assertEqual(manager.save_count, 1)
         dialog.close()
 

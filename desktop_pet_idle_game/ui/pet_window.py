@@ -205,7 +205,7 @@ class PetWindow(QMainWindow):
             self._draw_small_mouth(p)
             # 汗滴
             p.setPen(QPen(QColor("#66CCFF"), 1.5))
-            p.setBrush(Qt.NoPen)
+            p.setBrush(Qt.NoBrush)
             p.drawEllipse(QPointF(98, 45), 4, 6)
 
         else:  # IDLE
@@ -256,7 +256,7 @@ class PetWindow(QMainWindow):
 
     def _draw_happy_eyes(self, p: QPainter):
         p.setPen(QPen(Qt.black, 2))
-        p.setBrush(Qt.NoPen)
+        p.setBrush(Qt.NoBrush)
         # ^ ^ 形状用弧线
         path = QPainterPath()
         path.moveTo(56, 55)
@@ -433,6 +433,10 @@ class PetWindow(QMainWindow):
             work_action.setToolTip(work_msg)
         work_action.triggered.connect(self._open_work_dialog)
 
+        if self.state.status in (PetStatus.STUDYING, PetStatus.WORKING):
+            cancel_task_action = menu.addAction("停止当前任务")
+            cancel_task_action.triggered.connect(self._cancel_current_task)
+
         menu.addSeparator()
 
         # 商店
@@ -501,6 +505,13 @@ class PetWindow(QMainWindow):
                 self.save_manager.save(self.state)
                 self._show_tip(f"开始工作：{dlg.selected_job}")
                 self.update()
+
+    def _cancel_current_task(self):
+        ok, msg = TaskSystem.cancel_current_task(self.state)
+        if ok:
+            self.save_manager.save(self.state)
+        self._show_tip(msg)
+        self.update()
 
     def _open_shop(self):
         from .shop_dialog import ShopDialog

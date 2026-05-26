@@ -7,6 +7,39 @@ from PySide6.QtCore import Qt
 from core.game_state import GameState
 from core.shop_system import ShopSystem
 
+CARD_STYLE = """
+QFrame {
+    background: #f8f8f8;
+    border: 1px solid #d9d9d9;
+    border-radius: 8px;
+    padding: 8px;
+    margin: 4px;
+}
+QLabel {
+    color: #222222;
+    background: transparent;
+}
+"""
+
+DIALOG_STYLE = """
+QDialog, QScrollArea, QWidget {
+    background: #303030;
+    color: #ffffff;
+}
+QLabel {
+    color: #ffffff;
+}
+QPushButton {
+    min-height: 28px;
+    padding: 4px 12px;
+}
+QPushButton:disabled {
+    color: #777777;
+    background: #eeeeee;
+    border: 1px solid #cccccc;
+}
+"""
+
 
 class ShopDialog(QDialog):
     def __init__(self, state: GameState, save_manager=None, parent=None):
@@ -16,6 +49,7 @@ class ShopDialog(QDialog):
         self.setWindowTitle("商店")
         self.setMinimumWidth(320)
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
+        self.setStyleSheet(DIALOG_STYLE)
         self._init_ui()
 
     def _init_ui(self):
@@ -47,12 +81,12 @@ class ShopDialog(QDialog):
     def _create_item_card(self, item: dict) -> QFrame:
         card = QFrame()
         card.setFrameStyle(QFrame.StyledPanel)
-        card.setStyleSheet("QFrame { background: #f8f8f8; border-radius: 8px; padding: 8px; margin: 4px; }")
+        card.setStyleSheet(CARD_STYLE)
 
         row = QHBoxLayout(card)
 
         info = QLabel(f"{item['name']}\n价格：{item['price']} 金币")
-        info.setStyleSheet("font-size: 14px;")
+        info.setStyleSheet("font-size: 14px; color: #222222;")
         row.addWidget(info)
 
         row.addStretch()

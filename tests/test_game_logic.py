@@ -96,6 +96,43 @@ class TaskSystemTest(unittest.TestCase):
         self.assertEqual(state.coins, 15)
         self.assertEqual(state.status, PetStatus.IDLE)
 
+    def test_cancel_study_does_not_grant_knowledge(self):
+        state = GameState(knowledge=2)
+        self.assertTrue(TaskSystem.start_study(state))
+
+        ok, msg = TaskSystem.cancel_current_task(state)
+
+        self.assertTrue(ok)
+        self.assertIn("已停止任务", msg)
+        self.assertEqual(state.knowledge, 2)
+        self.assertIsNone(state.current_task)
+        self.assertEqual(state.task_remaining_seconds, 0)
+        self.assertEqual(state.status, PetStatus.IDLE)
+
+    def test_cancel_work_does_not_grant_coins(self):
+        state = GameState(coins=5, knowledge=0)
+        self.assertTrue(TaskSystem.start_work(state, "捡瓶子"))
+
+        ok, msg = TaskSystem.cancel_current_task(state)
+
+        self.assertTrue(ok)
+        self.assertIn("已停止任务", msg)
+        self.assertEqual(state.coins, 5)
+        self.assertIsNone(state.current_task)
+        self.assertEqual(state.task_remaining_seconds, 0)
+        self.assertEqual(state.status, PetStatus.IDLE)
+
+    def test_cancel_without_task_fails_without_state_change(self):
+        state = GameState(coins=5, knowledge=2, status=PetStatus.IDLE)
+
+        ok, msg = TaskSystem.cancel_current_task(state)
+
+        self.assertFalse(ok)
+        self.assertEqual(msg, "当前没有正在进行的任务")
+        self.assertEqual(state.coins, 5)
+        self.assertEqual(state.knowledge, 2)
+        self.assertEqual(state.status, PetStatus.IDLE)
+
 
 class ShopSystemTest(unittest.TestCase):
     def test_food_is_bought_then_used_from_inventory(self):

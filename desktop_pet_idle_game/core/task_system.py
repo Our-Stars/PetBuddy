@@ -59,6 +59,21 @@ class TaskSystem:
         return True
 
     @staticmethod
+    def cancel_current_task(state: GameState) -> tuple[bool, str]:
+        """取消当前学习或工作任务，不结算奖励。"""
+        if state.status not in (PetStatus.STUDYING, PetStatus.WORKING) or state.current_task is None:
+            return False, "当前没有正在进行的任务"
+
+        task_name = state.current_task
+        state.current_task = None
+        state.task_remaining_seconds = 0
+        state.status = PetStatus.IDLE
+
+        from .game_rules import GameRules
+        GameRules.update_status(state)
+        return True, f"已停止任务：{task_name}"
+
+    @staticmethod
     def tick(state: GameState):
         """主循环每 tick 调用，处理任务倒计时"""
         if state.status not in (PetStatus.STUDYING, PetStatus.WORKING):
