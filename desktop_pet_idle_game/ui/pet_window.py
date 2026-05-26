@@ -16,20 +16,20 @@ from core.task_system import TaskSystem, STUDY_DURATION, SLEEP_DURATION
 from core.shop_system import ShopSystem
 from storage.save_manager import SaveManager
 
-STATE_FOLDERS = {
-    PetStatus.IDLE: "idle",
-    PetStatus.HAPPY: "happy",
-    PetStatus.HUNGRY: "hungry",
-    PetStatus.STUDYING: "studying",
-    PetStatus.WORKING: "working",
-    PetStatus.SLEEPING: "sleeping",
+STATIC_FILES = {
+    PetStatus.IDLE: "pet_idle.png",
+    PetStatus.HAPPY: "pet_happy.png",
+    PetStatus.HUNGRY: "pet_hungry.png",
+    PetStatus.STUDYING: "pet_studying.png",
+    PetStatus.WORKING: "pet_working.png",
+    PetStatus.SLEEPING: "pet_sleeping.png",
 }
 
-ANIM_FPS = 12
+STATIC_DIR = "Original static image"
 
 
-def _asset_path(filename: str) -> str:
-    return os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "assets", filename)
+def _asset_path(*parts: str) -> str:
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "assets", *parts)
 
 
 class PetWindow(QMainWindow):
@@ -43,7 +43,6 @@ class PetWindow(QMainWindow):
         self.drag_offset = QPoint()
         self.press_global_pos = QPoint()
         self._frames: dict[PetStatus, list[QPixmap]] = {}
-        self._frame_idx = 0
         self._current_pixmap: QPixmap | None = None
 
         self._init_window()
@@ -68,43 +67,22 @@ class PetWindow(QMainWindow):
         self.setWindowTitle("桌面宠物")
 
     def _load_frames(self):
-        for status, folder in STATE_FOLDERS.items():
-            d = _asset_path(folder)
-            if not os.path.isdir(d):
-                continue
-            frames = []
-            for fname in sorted(os.listdir(d)):
-                if fname.endswith('.png'):
-                    pix = QPixmap(os.path.join(d, fname))
-                    if not pix.isNull():
-                        frames.append(pix)
-            if frames:
-                self._frames[status] = frames
+        for status, fname in STATIC_FILES.items():
+            pix = QPixmap(_asset_path(STATIC_DIR, fname))
+            if not pix.isNull():
+                self._frames[status] = [pix]
         self._update_frame()
 
     def _update_frame(self):
         frames = self._frames.get(self.state.status)
         if frames:
-            self._frame_idx = 0
             self._current_pixmap = frames[0]
-        self.update()
-
-    def _anim_tick(self):
-        frames = self._frames.get(self.state.status)
-        if not frames:
-            return
-        self._frame_idx = (self._frame_idx + 1) % len(frames)
-        self._current_pixmap = frames[self._frame_idx]
         self.update()
 
     def _init_timer(self):
         self.timer = QTimer(self)
         self.timer.timeout.connect(self._game_tick)
         self.timer.start(1000)
-        # 动画计时器（独立于游戏 tick）
-        self.anim_timer = QTimer(self)
-        self.anim_timer.timeout.connect(self._anim_tick)
-        self.anim_timer.start(int(1000 / ANIM_FPS))
 
     def _load_position(self):
         pos = self._clamp_to_screen(QPoint(self.state.position_x, self.state.position_y))
@@ -204,7 +182,7 @@ class PetWindow(QMainWindow):
     def _draw_status_text(self, p: QPainter):
         """绘制简要状态文字。"""
         labels = {
-            PetStatus.IDLE: "待机",
+            PetStatus.IDLE: "空闲",
             PetStatus.HAPPY: "开心",
             PetStatus.HUNGRY: "饥饿",
             PetStatus.STUDYING: "学习",

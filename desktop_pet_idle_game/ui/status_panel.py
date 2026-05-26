@@ -11,7 +11,7 @@ from core.shop_system import ShopSystem
 from core.task_system import TaskSystem
 
 STATUS_LABELS = {
-    PetStatus.IDLE: "待机中",
+    PetStatus.IDLE: "空闲",
     PetStatus.HAPPY: "开心",
     PetStatus.HUNGRY: "饥饿",
     PetStatus.STUDYING: "学习中",
