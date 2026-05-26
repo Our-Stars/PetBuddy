@@ -10,6 +10,7 @@ class PetStatus(Enum):
     HUNGRY = "hungry"
     STUDYING = "studying"
     WORKING = "working"
+    SLEEPING = "sleeping"
 
 
 class PetSize(Enum):
@@ -27,6 +28,7 @@ class GameState:
     status: PetStatus = PetStatus.IDLE
     food_count: int = 0
     premium_food_count: int = 0
+    toy_count: int = 0
     bed_level: int = 0
     current_task: str | None = None
     task_remaining_seconds: int = 0

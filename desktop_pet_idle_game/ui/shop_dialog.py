@@ -85,7 +85,8 @@ class ShopDialog(QDialog):
 
         row = QHBoxLayout(card)
 
-        info = QLabel(f"{item['name']}\n价格：{item['price']} 金币")
+        desc = item.get("desc", "")
+        info = QLabel(f"{item['name']}\n价格：{item['price']} 金币\n{desc}")
         info.setStyleSheet("font-size: 14px; color: #222222;")
         row.addWidget(info)
 

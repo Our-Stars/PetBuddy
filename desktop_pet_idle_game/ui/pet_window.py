@@ -11,7 +11,7 @@ from PySide6.QtGui import (
 
 from core.game_state import GameState, PetStatus
 from core.game_rules import GameRules
-from core.task_system import TaskSystem, STUDY_DURATION
+from core.task_system import TaskSystem, STUDY_DURATION, SLEEP_DURATION
 from core.shop_system import ShopSystem
 from storage.save_manager import SaveManager
 
@@ -222,6 +222,14 @@ class PetWindow(QMainWindow):
             p.setBrush(Qt.NoBrush)
             p.drawEllipse(QPointF(98, 45), 4, 6)
 
+        elif status == PetStatus.SLEEPING:
+            # 睡觉：闭眼 + zZ
+            self._draw_closed_eyes(p)
+            self._draw_small_mouth(p)
+            p.setPen(QPen(QColor("#6666CC"), 1.5))
+            p.setFont(QFont("Arial", 9))
+            p.drawText(QRectF(88, 38, 30, 14), Qt.AlignLeft, "zZ")
+
         else:  # IDLE
             self._draw_normal_eyes(p)
             self._draw_small_mouth(p)
@@ -250,6 +258,7 @@ class PetWindow(QMainWindow):
             PetStatus.HUNGRY: "饥饿",
             PetStatus.STUDYING: "学习",
             PetStatus.WORKING: "工作",
+            PetStatus.SLEEPING: "睡觉",
         }
         text = f"{labels.get(self.state.status, '未知')}  金币:{self.state.coins}"
         p.setPen(QPen(QColor("#333333"), 1))
@@ -259,8 +268,12 @@ class PetWindow(QMainWindow):
     def _draw_task_progress(self, p: QPainter, scale: float, offset_y: int):
         """在宠物下方绘制任务进度条和时间文字"""
         s = self.state
-        total = STUDY_DURATION if s.status == PetStatus.STUDYING else 0
-        if s.status == PetStatus.WORKING:
+        total = 0
+        if s.status == PetStatus.STUDYING:
+            total = STUDY_DURATION
+        elif s.status == PetStatus.SLEEPING:
+            total = SLEEP_DURATION
+        elif s.status == PetStatus.WORKING:
             job = TaskSystem.get_job_by_name(s.current_task)
             if job:
                 total = job["duration"]
@@ -344,6 +357,20 @@ class PetWindow(QMainWindow):
         # 瞳孔
         p.setBrush(QBrush(Qt.black))
         p.drawEllipse(QPointF(65, 59), 2, 2)
+
+    def _draw_closed_eyes(self, p: QPainter):
+        """睡觉闭眼"""
+        p.setPen(QPen(Qt.black, 2))
+        p.setBrush(Qt.NoBrush)
+        # 两条弧线表示闭眼
+        path = QPainterPath()
+        path.moveTo(58, 56)
+        path.cubicTo(61, 60, 67, 60, 70, 56)
+        p.drawPath(path)
+        path2 = QPainterPath()
+        path2.moveTo(80, 56)
+        path2.cubicTo(83, 60, 89, 60, 92, 56)
+        p.drawPath(path2)
 
     def _draw_determined_eyes(self, p: QPainter):
         p.setBrush(QBrush(Qt.white))
@@ -450,7 +477,7 @@ class PetWindow(QMainWindow):
         if (
             self.state.click_animation_enabled
             and not self.state.quiet_mode
-            and self.state.status not in (PetStatus.STUDYING, PetStatus.WORKING)
+            and self.state.status not in (PetStatus.STUDYING, PetStatus.WORKING, PetStatus.SLEEPING)
         ):
             self.state.happy_timer = 3  # 开心 3 秒
             self.state.status = PetStatus.HAPPY
@@ -497,7 +524,23 @@ class PetWindow(QMainWindow):
             work_action.setToolTip(work_msg)
         work_action.triggered.connect(self._open_work_dialog)
 
-        if self.state.status in (PetStatus.STUDYING, PetStatus.WORKING):
+        # 睡觉
+        sleep_action = menu.addAction("睡觉")
+        can_sleep, sleep_msg = GameRules.can_sleep(self.state)
+        sleep_action.setEnabled(can_sleep)
+        if not can_sleep:
+            sleep_action.setToolTip(sleep_msg)
+        sleep_action.triggered.connect(self._start_sleep)
+
+        # 使用玩具
+        toy_action = menu.addAction(f"使用玩具（{self.state.toy_count}个）")
+        can_toy, toy_msg = GameRules.can_use_toy(self.state)
+        toy_action.setEnabled(can_toy)
+        if not can_toy:
+            toy_action.setToolTip(toy_msg)
+        toy_action.triggered.connect(self._use_toy)
+
+        if self.state.status in (PetStatus.STUDYING, PetStatus.WORKING, PetStatus.SLEEPING):
             cancel_task_action = menu.addAction("停止当前任务")
             cancel_task_action.triggered.connect(self._cancel_current_task)
 
@@ -553,6 +596,26 @@ class PetWindow(QMainWindow):
         TaskSystem.start_study(self.state)
         self.save_manager.save(self.state)
         self._show_tip("开始学习")
+        self.update()
+
+    def _start_sleep(self):
+        can, msg = GameRules.can_sleep(self.state)
+        if not can:
+            self._show_tip(msg)
+            return
+        TaskSystem.start_sleep(self.state)
+        self.save_manager.save(self.state)
+        self._show_tip("开始睡觉")
+        self.update()
+
+    def _use_toy(self):
+        ok, msg = ShopSystem.use_toy(self.state)
+        if ok:
+            if self.state.click_animation_enabled and not self.state.quiet_mode:
+                self.state.happy_timer = 3
+            GameRules.update_status(self.state)
+            self.save_manager.save(self.state)
+        self._show_tip(msg)
         self.update()
 
     def _open_work_dialog(self):

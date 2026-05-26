@@ -16,6 +16,7 @@ STATUS_LABELS = {
     PetStatus.HUNGRY: "饥饿",
     PetStatus.STUDYING: "学习中",
     PetStatus.WORKING: "工作中",
+    PetStatus.SLEEPING: "睡觉中",
 }
 
 
@@ -43,6 +44,7 @@ class StatusPanel(QDialog):
         self.lbl_task = QLabel()
         self.lbl_food = QLabel()
         self.lbl_premium = QLabel()
+        self.lbl_toy = QLabel()
         self.lbl_bed = QLabel()
 
         form.addRow("金币：", self.lbl_coins)
@@ -53,6 +55,7 @@ class StatusPanel(QDialog):
         form.addRow("当前任务：", self.lbl_task)
         form.addRow("普通食物：", self.lbl_food)
         form.addRow("高级食物：", self.lbl_premium)
+        form.addRow("玩具：", self.lbl_toy)
         form.addRow("小床等级：", self.lbl_bed)
         group.setLayout(form)
         layout.addWidget(group)
@@ -92,10 +95,11 @@ class StatusPanel(QDialog):
 
         self.lbl_food.setText(str(s.food_count))
         self.lbl_premium.setText(str(s.premium_food_count))
+        self.lbl_toy.setText(str(s.toy_count))
         self.lbl_bed.setText(str(s.bed_level))
         self.btn_feed_normal.setEnabled(s.food_count > 0)
         self.btn_feed_premium.setEnabled(s.premium_food_count > 0)
-        self.btn_cancel_task.setEnabled(s.status in (PetStatus.STUDYING, PetStatus.WORKING))
+        self.btn_cancel_task.setEnabled(s.status in (PetStatus.STUDYING, PetStatus.WORKING, PetStatus.SLEEPING))
 
     def _feed(self, is_premium: bool):
         ok, msg = ShopSystem.use_food(self.state, is_premium=is_premium)

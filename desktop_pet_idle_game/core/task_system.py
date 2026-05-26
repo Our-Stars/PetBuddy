@@ -6,6 +6,10 @@ from .game_state import GameState, PetStatus
 STUDY_DURATION = 60  # 秒
 STUDY_KNOWLEDGE_GAIN = 1
 
+# 睡觉配置
+SLEEP_DURATION = 30  # 秒
+SLEEP_MOOD_RECOVERY = 20
+
 # 工作列表
 JOBS = [
     {"name": "捡瓶子", "knowledge": 0, "duration": 60, "reward": 20},
@@ -59,9 +63,21 @@ class TaskSystem:
         return True
 
     @staticmethod
+    def start_sleep(state: GameState) -> bool:
+        """开始睡觉，返回是否成功"""
+        from .game_rules import GameRules
+        can_start, _ = GameRules.can_sleep(state)
+        if not can_start:
+            return False
+        state.status = PetStatus.SLEEPING
+        state.current_task = "睡觉"
+        state.task_remaining_seconds = SLEEP_DURATION
+        return True
+
+    @staticmethod
     def cancel_current_task(state: GameState) -> tuple[bool, str]:
-        """取消当前学习或工作任务，不结算奖励。"""
-        if state.status not in (PetStatus.STUDYING, PetStatus.WORKING) or state.current_task is None:
+        """取消当前任务（学习/工作/睡觉），不结算奖励。"""
+        if state.status not in (PetStatus.STUDYING, PetStatus.WORKING, PetStatus.SLEEPING) or state.current_task is None:
             return False, "当前没有正在进行的任务"
 
         task_name = state.current_task
@@ -76,7 +92,7 @@ class TaskSystem:
     @staticmethod
     def tick(state: GameState):
         """主循环每 tick 调用，处理任务倒计时"""
-        if state.status not in (PetStatus.STUDYING, PetStatus.WORKING):
+        if state.status not in (PetStatus.STUDYING, PetStatus.WORKING, PetStatus.SLEEPING):
             return
 
         if state.task_remaining_seconds <= 0:
@@ -105,7 +121,11 @@ class TaskSystem:
 
         result = {"task": state.current_task, "type": "", "message": ""}
 
-        if state.status == PetStatus.STUDYING:
+        if state.status == PetStatus.SLEEPING:
+            state.mood = min(100, state.mood + SLEEP_MOOD_RECOVERY)
+            result["type"] = "sleep"
+            result["message"] = f"睡醒了！心情 +{SLEEP_MOOD_RECOVERY}"
+        elif state.status == PetStatus.STUDYING:
             gain = STUDY_KNOWLEDGE_GAIN
             state.knowledge += gain
             result["type"] = "study"
