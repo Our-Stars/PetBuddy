@@ -52,8 +52,8 @@ class GameState:
     @property
     def pet_size_pixels(self) -> tuple[int, int]:
         """返回宠物窗口的 (宽, 高)，高度包含顶部状态文字和底部进度条空间"""
-        base = {PetSize.SMALL: 100, PetSize.MEDIUM: 150, PetSize.LARGE: 200}[self.pet_size]
-        extra = int(base * 0.55)  # 顶部状态文字(4行) + 底部进度条空间
+        base = {PetSize.SMALL: 150, PetSize.MEDIUM: 200, PetSize.LARGE: 280}[self.pet_size]
+        extra = int(base * 0.55)
         return (base, base + extra)
 
     def clamp_values(self):
