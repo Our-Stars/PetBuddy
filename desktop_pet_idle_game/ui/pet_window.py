@@ -231,11 +231,11 @@ class PetWindow(QMainWindow):
         elapsed = total - s.task_remaining_seconds
         progress = max(0.0, min(1.0, elapsed / total))
 
-        # 动态计算进度条位置：宠物底部 + 间距
+        # 进度条放在宠物图片下沿
         status_h = 60 if self.state.show_status_text else 0
-        pet_bottom = (status_h + base) / scale  # 设计坐标
+        pet_bottom_design = (status_h + base * 0.85) / scale
         bar_x, bar_w, bar_h = 0, 150, 7
-        bar_y = pet_bottom + 5
+        bar_y = max(135, pet_bottom_design)
         radius = 3
 
         p.save()
