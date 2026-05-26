@@ -37,10 +37,12 @@ class PetWindow(QMainWindow):
     def _init_window(self):
         self.setWindowFlags(
             Qt.FramelessWindowHint
-            | Qt.Tool
+            | Qt.Window
             | Qt.WindowStaysOnTopHint
         )
         self.setAttribute(Qt.WA_TranslucentBackground)
+        self.setAttribute(Qt.WA_ShowWithoutActivating)
+        self.setFocusPolicy(Qt.NoFocus)
         self.setFixedSize(self.state.pet_size_pixels, self.state.pet_size_pixels)
         self.setWindowTitle("桌面宠物")
 
@@ -56,9 +58,9 @@ class PetWindow(QMainWindow):
         self.state.position_y = pos.y()
 
     def apply_settings(self):
-        """应用置顶和安静模式设置"""
+        """应用置顶设置"""
         self.hide()
-        flags = Qt.FramelessWindowHint | Qt.Tool
+        flags = Qt.FramelessWindowHint | Qt.Window
         if self.state.always_on_top:
             flags |= Qt.WindowStaysOnTopHint
         self.setWindowFlags(flags)
