@@ -108,8 +108,8 @@ class PetWindow(QMainWindow):
         state.elapsed_seconds += 1
         should_save = False
 
-        # 每 10 秒自然金币
-        if state.elapsed_seconds % 10 == 0:
+        # 每 30 秒自然金币
+        if state.elapsed_seconds % 30 == 0:
             gained = GameRules.add_natural_coin_income(state)
             should_save = should_save or gained > 0
 
@@ -133,6 +133,7 @@ class PetWindow(QMainWindow):
         if result:
             should_save = True
             self._show_tip(result["message"])
+            self._update_frame()
 
         # 更新宠物显示状态（非任务中）
         old_status = state.status
@@ -156,31 +157,31 @@ class PetWindow(QMainWindow):
         scale = base / 150.0
         offset_y = int((full_h - base) / scale)
 
-        # --- GIF 帧（QMovie 自动处理透明色） ---
+        # --- 宠物图片（下移，给顶部状态文字留空间） ---
+        status_area_h = 60 if self.state.show_status_text else 0
         if self._current_pixmap and not self._current_pixmap.isNull():
             scaled = self._current_pixmap.scaled(
-                base, base + offset_y + 10,
-                Qt.KeepAspectRatio, Qt.SmoothTransformation,
+                base, base, Qt.KeepAspectRatio, Qt.SmoothTransformation,
             )
             px = (self.width() - scaled.width()) // 2
-            py = (self.height() - scaled.height()) // 2 - offset_y // 2
+            py = status_area_h
             painter.drawPixmap(px, py, scaled)
 
-        # --- 状态文字（顶部） ---
+        # --- 状态文字（猫下方，带半透明背景） ---
         if self.state.show_status_text:
             painter.save()
             painter.scale(scale, scale)
-            self._draw_status_text(painter)
+            self._draw_status_text(painter, offset_y)
             painter.restore()
 
         # --- 任务进度条（底部） ---
         if self.state.current_task:
-            self._draw_task_progress(painter, scale, offset_y)
+            self._draw_task_progress(painter, scale, base)
 
         painter.end()
 
-    def _draw_status_text(self, p: QPainter):
-        """绘制简要状态文字。"""
+    def _draw_status_text(self, p: QPainter, offset_y: int):
+        """绘制状态文字，四行各占一行 + 半透明背景，位于窗口顶部"""
         labels = {
             PetStatus.IDLE: "空闲",
             PetStatus.HAPPY: "开心",
@@ -189,12 +190,30 @@ class PetWindow(QMainWindow):
             PetStatus.WORKING: "工作",
             PetStatus.SLEEPING: "睡觉",
         }
-        text = f"{labels.get(self.state.status, '未知')}  金币:{self.state.coins}"
-        p.setPen(QPen(QColor("#333333"), 1))
-        p.setFont(QFont("Arial", 16))
-        p.drawText(QRectF(5, 4, 140, 26), Qt.AlignCenter, text)
+        s = self.state
+        lines = [
+            labels.get(s.status, "未知"),
+            f"心情: {s.mood:.1f}",
+            f"饱食: {s.satiety:.1f}",
+            f"金币: {s.coins:.1f}",
+        ]
+        font_h = 13
+        total_h = len(lines) * font_h + 6
+        top_y = 0
 
-    def _draw_task_progress(self, p: QPainter, scale: float, offset_y: int):
+        # 半透明背景
+        p.setPen(Qt.NoPen)
+        p.setBrush(QBrush(QColor(0, 0, 0, 100)))
+        p.drawRoundedRect(QRectF(15, top_y, 120, total_h), 6, 6)
+        # 白色文字
+        p.setPen(QPen(Qt.white, 1))
+        p.setFont(QFont("Arial", 11))
+        y = top_y + 2
+        for line in lines:
+            p.drawText(QRectF(15, y, 120, font_h), Qt.AlignCenter, line)
+            y += font_h
+
+    def _draw_task_progress(self, p: QPainter, scale: float, base: int):
         """在宠物下方绘制任务进度条和时间文字"""
         s = self.state
         total = 0
@@ -212,9 +231,11 @@ class PetWindow(QMainWindow):
         elapsed = total - s.task_remaining_seconds
         progress = max(0.0, min(1.0, elapsed / total))
 
-        # 进度条放在宠物下方（设计坐标 y=135，上移一半 offset）
+        # 动态计算进度条位置：宠物底部 + 间距
+        status_h = 60 if self.state.show_status_text else 0
+        pet_bottom = (status_h + base) / scale  # 设计坐标
         bar_x, bar_w, bar_h = 0, 150, 7
-        bar_y = 135 - offset_y // 2
+        bar_y = pet_bottom + 5
         radius = 3
 
         p.save()

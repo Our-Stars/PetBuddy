@@ -49,7 +49,7 @@ def dict_to_game_state(data: dict) -> GameState:
         coins=data.get("coins", 0),
         mood=data.get("mood", 80),
         satiety=data.get("satiety", 80),
-        knowledge=data.get("knowledge", 0),
+        knowledge=float(data.get("knowledge", 0)),
         status=status,
         food_count=data.get("food_count", 0),
         premium_food_count=data.get("premium_food_count", 0),

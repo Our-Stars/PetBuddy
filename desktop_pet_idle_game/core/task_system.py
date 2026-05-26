@@ -98,18 +98,14 @@ class TaskSystem:
         if state.task_remaining_seconds <= 0:
             return
 
-        if state.status == PetStatus.STUDYING and TaskSystem._study_speed_divisor(state) > 1:
-            if state.elapsed_seconds % TaskSystem._study_speed_divisor(state) != 0:
-                return
-
         state.task_remaining_seconds -= 1
 
     @staticmethod
-    def _study_speed_divisor(state: GameState) -> int:
-        """心情或饱食度较低时降低学习推进速度。"""
+    def _study_knowledge_multiplier(state: GameState) -> float:
+        """心情 < 20 或饱食度 < 60 时学识收益减半"""
         if state.mood < 20 or state.satiety < 60:
-            return 2
-        return 1
+            return 0.5
+        return 1.0
 
     @staticmethod
     def check_completion(state: GameState) -> dict | None:
@@ -126,10 +122,15 @@ class TaskSystem:
             result["type"] = "sleep"
             result["message"] = f"睡醒了！心情 +{SLEEP_MOOD_RECOVERY}"
         elif state.status == PetStatus.STUDYING:
-            gain = STUDY_KNOWLEDGE_GAIN
+            from .game_rules import GameRules
+            mult = TaskSystem._study_knowledge_multiplier(state)
+            gain = STUDY_KNOWLEDGE_GAIN * mult
             state.knowledge += gain
             result["type"] = "study"
-            result["message"] = f"学习完成！学识 +{gain}"
+            if mult < 1.0:
+                result["message"] = f"学习完成！学识 +{gain:.1f}（低心情/低饱食度减半）"
+            else:
+                result["message"] = f"学习完成！学识 +{gain:.0f}"
         elif state.status == PetStatus.WORKING:
             job = TaskSystem.get_job_by_name(state.current_task)
             if job:

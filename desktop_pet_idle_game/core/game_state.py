@@ -24,7 +24,7 @@ class GameState:
     coins: int = 0
     mood: int = 80
     satiety: int = 80
-    knowledge: int = 0
+    knowledge: float = 0.0
     status: PetStatus = PetStatus.IDLE
     food_count: int = 0
     premium_food_count: int = 0
@@ -51,9 +51,9 @@ class GameState:
 
     @property
     def pet_size_pixels(self) -> tuple[int, int]:
-        """返回宠物窗口的 (宽, 高)，高度包含进度条空间"""
+        """返回宠物窗口的 (宽, 高)，高度包含顶部状态文字和底部进度条空间"""
         base = {PetSize.SMALL: 100, PetSize.MEDIUM: 150, PetSize.LARGE: 200}[self.pet_size]
-        extra = int(base * 0.15)  # 进度条额外空间
+        extra = int(base * 0.55)  # 顶部状态文字(4行) + 底部进度条空间
         return (base, base + extra)
 
     def clamp_values(self):

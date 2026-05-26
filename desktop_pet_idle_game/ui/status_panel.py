@@ -80,10 +80,10 @@ class StatusPanel(QDialog):
 
     def _refresh(self):
         s = self.state
-        self.lbl_coins.setText(str(s.coins))
-        self.lbl_mood.setText(f"{s.mood} / 100")
-        self.lbl_satiety.setText(f"{s.satiety} / 100")
-        self.lbl_knowledge.setText(str(s.knowledge))
+        self.lbl_coins.setText(f"{s.coins:.1f}")
+        self.lbl_mood.setText(f"{s.mood:.1f} / 100.0")
+        self.lbl_satiety.setText(f"{s.satiety:.1f} / 100.0")
+        self.lbl_knowledge.setText(f"{s.knowledge:.1f}")
         self.lbl_status.setText(STATUS_LABELS.get(s.status, "未知"))
 
         if s.current_task:
