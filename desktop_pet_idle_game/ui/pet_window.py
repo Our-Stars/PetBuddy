@@ -1,16 +1,15 @@
 """宠物主窗口：无边框透明窗口、拖动、点击、右键菜单、主循环"""
 
-import math
 from PySide6.QtWidgets import (
-    QMainWindow, QMenu, QSystemTrayIcon, QApplication, QWidget,
+    QMainWindow, QMenu, QApplication, QToolTip,
 )
 from PySide6.QtCore import Qt, QTimer, QPoint, QPointF, QRectF
 from PySide6.QtGui import (
     QPainter, QBrush, QColor, QPen, QFont, QPainterPath,
-    QMouseEvent, QAction, QPolygonF,
+    QMouseEvent, QPolygonF,
 )
 
-from core.game_state import GameState, PetStatus, PetSize
+from core.game_state import GameState, PetStatus
 from core.game_rules import GameRules
 from core.task_system import TaskSystem
 from core.shop_system import ShopSystem
@@ -26,6 +25,7 @@ class PetWindow(QMainWindow):
         self.save_manager = save_manager
         self.dragging = False
         self.drag_offset = QPoint()
+        self.press_global_pos = QPoint()
 
         self._init_window()
         self._init_timer()
@@ -50,7 +50,10 @@ class PetWindow(QMainWindow):
         self.timer.start(1000)
 
     def _load_position(self):
-        self.move(self.state.position_x, self.state.position_y)
+        pos = self._clamp_to_screen(QPoint(self.state.position_x, self.state.position_y))
+        self.move(pos)
+        self.state.position_x = pos.x()
+        self.state.position_y = pos.y()
 
     def apply_settings(self):
         """应用置顶和安静模式设置"""
@@ -67,16 +70,20 @@ class PetWindow(QMainWindow):
     def _game_tick(self):
         state = self.state
         state.elapsed_seconds += 1
+        should_save = False
 
         # 每 10 秒自然金币
         if state.elapsed_seconds % 10 == 0:
-            mult = GameRules.get_mood_multiplier(state.mood)
-            state.coins += max(1, int(1 * mult))
+            gained = GameRules.add_natural_coin_income(state)
+            should_save = should_save or gained > 0
 
         # 每 60 秒心情和饱食度下降
         if state.elapsed_seconds % 60 == 0:
+            old_mood = state.mood
+            old_satiety = state.satiety
             state.mood = max(0, state.mood - 1)
             state.satiety = max(0, state.satiety - 1)
+            should_save = should_save or state.mood != old_mood or state.satiety != old_satiety
 
         # Happy 计时器
         if state.happy_timer > 0:
@@ -88,15 +95,14 @@ class PetWindow(QMainWindow):
         # 检查任务完成
         result = TaskSystem.check_completion(state)
         if result:
-            self.save_manager.save(state)
-            if state.status == PetStatus.IDLE:
-                pass  # 状态已在 check_completion 中更新
+            should_save = True
+            self._show_tip(result["message"])
 
         # 更新宠物显示状态（非任务中）
         GameRules.update_status(state)
 
         # 自动保存（每 45 秒）
-        if state.elapsed_seconds % 45 == 0:
+        if should_save or state.elapsed_seconds % 45 == 0:
             self.save_manager.save(state)
 
         self.update()
@@ -124,6 +130,8 @@ class PetWindow(QMainWindow):
         self._draw_face(painter, status)
         # 表情
         self._draw_expression(painter, status, mood, satiety)
+        if self.state.show_status_text:
+            self._draw_status_text(painter)
 
         painter.end()
 
@@ -219,6 +227,20 @@ class PetWindow(QMainWindow):
         p.drawLine(QPointF(102, 63), QPointF(122, 58))
         p.drawLine(QPointF(102, 66), QPointF(124, 66))
         p.drawLine(QPointF(102, 69), QPointF(122, 74))
+
+    def _draw_status_text(self, p: QPainter):
+        """绘制简要状态文字。"""
+        labels = {
+            PetStatus.IDLE: "待机",
+            PetStatus.HAPPY: "开心",
+            PetStatus.HUNGRY: "饥饿",
+            PetStatus.STUDYING: "学习",
+            PetStatus.WORKING: "工作",
+        }
+        text = f"{labels.get(self.state.status, '未知')}  金币:{self.state.coins}"
+        p.setPen(QPen(QColor("#333333"), 1))
+        p.setFont(QFont("Arial", 8))
+        p.drawText(QRectF(5, 2, 140, 18), Qt.AlignCenter, text)
 
     # ---- 表情组件 ----
 
@@ -316,12 +338,13 @@ class PetWindow(QMainWindow):
     def mousePressEvent(self, event: QMouseEvent):
         if event.button() == Qt.LeftButton:
             self.dragging = True
+            self.press_global_pos = event.globalPosition().toPoint()
             self.drag_offset = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
             self.setCursor(Qt.ClosedHandCursor)
 
     def mouseMoveEvent(self, event: QMouseEvent):
         if self.dragging:
-            new_pos = event.globalPosition().toPoint() - self.drag_offset
+            new_pos = self._clamp_to_screen(event.globalPosition().toPoint() - self.drag_offset)
             self.move(new_pos)
             # 保存位置
             self.state.position_x = new_pos.x()
@@ -333,9 +356,22 @@ class PetWindow(QMainWindow):
             self.setCursor(Qt.ArrowCursor)
 
             # 判断是否是点击（没有明显拖动）
-            drag_distance = (event.globalPosition().toPoint() - self.frameGeometry().topLeft() - self.drag_offset).manhattanLength()
+            drag_distance = (event.globalPosition().toPoint() - self.press_global_pos).manhattanLength()
             if drag_distance < 5:
                 self._on_click()
+
+    def _clamp_to_screen(self, pos: QPoint) -> QPoint:
+        """限制窗口至少保留在当前屏幕可见区域内。"""
+        screen = QApplication.screenAt(pos) or QApplication.primaryScreen()
+        if screen is None:
+            return pos
+
+        rect = screen.availableGeometry()
+        width = self.width()
+        height = self.height()
+        x = max(rect.left(), min(pos.x(), rect.right() - width + 1))
+        y = max(rect.top(), min(pos.y(), rect.bottom() - height + 1))
+        return QPoint(x, y)
 
     def _on_click(self):
         """左键点击宠物互动"""
@@ -345,11 +381,24 @@ class PetWindow(QMainWindow):
 
         import time
         self.state.last_click_time = time.time()
-        self.state.mood = min(100, self.state.mood + 3)
-        self.state.happy_timer = 3  # 开心 3 秒
-        self.state.status = PetStatus.HAPPY
+        if self.state.click_mood_enabled:
+            self.state.mood = min(100, self.state.mood + 3)
+        if (
+            self.state.click_animation_enabled
+            and not self.state.quiet_mode
+            and self.state.status not in (PetStatus.STUDYING, PetStatus.WORKING)
+        ):
+            self.state.happy_timer = 3  # 开心 3 秒
+            self.state.status = PetStatus.HAPPY
+        GameRules.update_status(self.state)
         self.save_manager.save(self.state)
+        self._show_tip("心情 +3" if self.state.click_mood_enabled else "已互动")
         self.update()
+
+    def _show_tip(self, message: str):
+        if self.state.quiet_mode or not self.state.bubble_tips_enabled:
+            return
+        QToolTip.showText(self.mapToGlobal(QPoint(self.width() // 2, 0)), message, self)
 
     def contextMenuEvent(self, event):
         """右键菜单"""
@@ -411,25 +460,31 @@ class PetWindow(QMainWindow):
     def _feed_normal(self):
         ok, msg = ShopSystem.use_food(self.state, is_premium=False)
         if ok:
-            self.state.happy_timer = 3
+            if self.state.click_animation_enabled and not self.state.quiet_mode:
+                self.state.happy_timer = 3
             GameRules.update_status(self.state)
             self.save_manager.save(self.state)
+        self._show_tip(msg)
         self.update()
 
     def _feed_premium(self):
         ok, msg = ShopSystem.use_food(self.state, is_premium=True)
         if ok:
-            self.state.happy_timer = 3
+            if self.state.click_animation_enabled and not self.state.quiet_mode:
+                self.state.happy_timer = 3
             GameRules.update_status(self.state)
             self.save_manager.save(self.state)
+        self._show_tip(msg)
         self.update()
 
     def _start_study(self):
         can, msg = GameRules.can_study(self.state)
         if not can:
+            self._show_tip(msg)
             return
         TaskSystem.start_study(self.state)
         self.save_manager.save(self.state)
+        self._show_tip("开始学习")
         self.update()
 
     def _open_work_dialog(self):
@@ -438,24 +493,27 @@ class PetWindow(QMainWindow):
         if dlg.exec() and dlg.selected_job:
             can, msg = GameRules.can_work(self.state)
             if not can:
+                self._show_tip(msg)
                 return
             job = TaskSystem.get_job_by_name(dlg.selected_job)
             if job and self.state.knowledge >= job["knowledge"]:
                 TaskSystem.start_work(self.state, dlg.selected_job)
                 self.save_manager.save(self.state)
+                self._show_tip(f"开始工作：{dlg.selected_job}")
                 self.update()
 
     def _open_shop(self):
         from .shop_dialog import ShopDialog
-        dlg = ShopDialog(self.state, self)
+        dlg = ShopDialog(self.state, self.save_manager, self)
         if dlg.exec():
             self.save_manager.save(self.state)
             self.update()
 
     def _open_status(self):
         from .status_panel import StatusPanel
-        dlg = StatusPanel(self.state, self)
+        dlg = StatusPanel(self.state, self.save_manager, self)
         dlg.exec()
+        self.update()
 
     def _open_settings(self):
         from .settings_dialog import SettingsDialog
@@ -474,3 +532,4 @@ class PetWindow(QMainWindow):
     def closeEvent(self, event):
         self.save_manager.save(self.state)
         super().closeEvent(event)
+        QApplication.quit()

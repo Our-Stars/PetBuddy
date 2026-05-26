@@ -21,6 +21,10 @@ def game_state_to_dict(state: GameState) -> dict:
         "position_y": state.position_y,
         "pet_size": state.pet_size.value,
         "always_on_top": state.always_on_top,
+        "show_status_text": state.show_status_text,
+        "bubble_tips_enabled": state.bubble_tips_enabled,
+        "click_mood_enabled": state.click_mood_enabled,
+        "click_animation_enabled": state.click_animation_enabled,
         "quiet_mode": state.quiet_mode,
         "last_saved_time": state.last_saved_time,
     }
@@ -40,7 +44,7 @@ def dict_to_game_state(data: dict) -> GameState:
     except ValueError:
         pet_size = PetSize.MEDIUM
 
-    return GameState(
+    state = GameState(
         coins=data.get("coins", 0),
         mood=data.get("mood", 80),
         satiety=data.get("satiety", 80),
@@ -55,6 +59,12 @@ def dict_to_game_state(data: dict) -> GameState:
         position_y=data.get("position_y", 700),
         pet_size=pet_size,
         always_on_top=data.get("always_on_top", True),
+        show_status_text=data.get("show_status_text", False),
+        bubble_tips_enabled=data.get("bubble_tips_enabled", True),
+        click_mood_enabled=data.get("click_mood_enabled", True),
+        click_animation_enabled=data.get("click_animation_enabled", True),
         quiet_mode=data.get("quiet_mode", False),
         last_saved_time=data.get("last_saved_time", ""),
     )
+    state.clamp_values()
+    return state

@@ -32,6 +32,10 @@ class TaskSystem:
     @staticmethod
     def start_study(state: GameState) -> bool:
         """开始学习，返回是否成功"""
+        from .game_rules import GameRules
+        can_start, _ = GameRules.can_study(state)
+        if not can_start:
+            return False
         state.status = PetStatus.STUDYING
         state.current_task = "学习"
         state.task_remaining_seconds = STUDY_DURATION
@@ -40,8 +44,14 @@ class TaskSystem:
     @staticmethod
     def start_work(state: GameState, job_name: str) -> bool:
         """开始工作，返回是否成功"""
+        from .game_rules import GameRules
+        can_start, _ = GameRules.can_work(state)
+        if not can_start:
+            return False
         job = TaskSystem.get_job_by_name(job_name)
         if job is None:
+            return False
+        if state.knowledge < job["knowledge"]:
             return False
         state.status = PetStatus.WORKING
         state.current_task = job_name
@@ -57,7 +67,18 @@ class TaskSystem:
         if state.task_remaining_seconds <= 0:
             return
 
+        if state.status == PetStatus.STUDYING and TaskSystem._study_speed_divisor(state) > 1:
+            if state.elapsed_seconds % TaskSystem._study_speed_divisor(state) != 0:
+                return
+
         state.task_remaining_seconds -= 1
+
+    @staticmethod
+    def _study_speed_divisor(state: GameState) -> int:
+        """心情或饱食度较低时降低学习推进速度。"""
+        if state.mood < 20 or state.satiety < 60:
+            return 2
+        return 1
 
     @staticmethod
     def check_completion(state: GameState) -> dict | None:
@@ -71,9 +92,6 @@ class TaskSystem:
 
         if state.status == PetStatus.STUDYING:
             gain = STUDY_KNOWLEDGE_GAIN
-            # 心情低于 20 时学识收益减半
-            if state.mood < 20:
-                gain = max(1, gain // 2)
             state.knowledge += gain
             result["type"] = "study"
             result["message"] = f"学习完成！学识 +{gain}"
@@ -81,19 +99,9 @@ class TaskSystem:
             job = TaskSystem.get_job_by_name(state.current_task)
             if job:
                 base_reward = job["reward"]
-                mood_mult = 1.0
-                if state.mood >= 80:
-                    mood_mult = 1.5
-                elif state.mood >= 50:
-                    mood_mult = 1.0
-                elif state.mood >= 20:
-                    mood_mult = 0.7
-                else:
-                    mood_mult = 0.3
-
-                satiety_mult = 1.0
-                if 30 <= state.satiety <= 59:
-                    satiety_mult = 0.5
+                from .game_rules import GameRules
+                mood_mult = GameRules.get_mood_multiplier(state.mood)
+                satiety_mult = GameRules.get_satiety_multiplier(state.satiety)
 
                 reward = int(base_reward * mood_mult * satiety_mult)
                 state.coins += reward

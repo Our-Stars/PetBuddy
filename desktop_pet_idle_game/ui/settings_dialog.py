@@ -28,8 +28,18 @@ class SettingsDialog(QDialog):
 
         self.chk_top = QCheckBox("始终置顶")
         self.chk_top.setChecked(self.state.always_on_top)
-        self.chk_top.toggled.connect(lambda v: setattr(self.state, "always_on_top", v))
+        self.chk_top.toggled.connect(lambda v: self._set_and_save("always_on_top", v))
         display_form.addRow("置顶：", self.chk_top)
+
+        self.chk_status_text = QCheckBox("显示状态文字")
+        self.chk_status_text.setChecked(self.state.show_status_text)
+        self.chk_status_text.toggled.connect(lambda v: self._set_and_save("show_status_text", v))
+        display_form.addRow("状态文字：", self.chk_status_text)
+
+        self.chk_bubble = QCheckBox("启用气泡提示")
+        self.chk_bubble.setChecked(self.state.bubble_tips_enabled)
+        self.chk_bubble.toggled.connect(lambda v: self._set_and_save("bubble_tips_enabled", v))
+        display_form.addRow("气泡提示：", self.chk_bubble)
 
         self.cmb_size = QComboBox()
         self.cmb_size.addItems(["小", "中", "大"])
@@ -45,9 +55,19 @@ class SettingsDialog(QDialog):
         interact_group = QGroupBox("交互设置")
         interact_form = QFormLayout()
 
+        self.chk_click_mood = QCheckBox("点击增加心情")
+        self.chk_click_mood.setChecked(self.state.click_mood_enabled)
+        self.chk_click_mood.toggled.connect(lambda v: self._set_and_save("click_mood_enabled", v))
+        interact_form.addRow(self.chk_click_mood)
+
+        self.chk_click_animation = QCheckBox("显示点击动画")
+        self.chk_click_animation.setChecked(self.state.click_animation_enabled)
+        self.chk_click_animation.toggled.connect(lambda v: self._set_and_save("click_animation_enabled", v))
+        interact_form.addRow(self.chk_click_animation)
+
         self.chk_quiet = QCheckBox("安静模式（减少提示和动画）")
         self.chk_quiet.setChecked(self.state.quiet_mode)
-        self.chk_quiet.toggled.connect(lambda v: setattr(self.state, "quiet_mode", v))
+        self.chk_quiet.toggled.connect(lambda v: self._set_and_save("quiet_mode", v))
         interact_form.addRow(self.chk_quiet)
 
         interact_group.setLayout(interact_form)
@@ -73,6 +93,18 @@ class SettingsDialog(QDialog):
     def _on_size_changed(self, index: int):
         size_map = {0: PetSize.SMALL, 1: PetSize.MEDIUM, 2: PetSize.LARGE}
         self.state.pet_size = size_map.get(index, PetSize.MEDIUM)
+        self._save_and_apply()
+
+    def _set_and_save(self, name: str, value):
+        setattr(self.state, name, value)
+        self._save_and_apply()
+
+    def _save_and_apply(self):
+        parent = self.parent()
+        if parent is not None and hasattr(parent, "apply_settings"):
+            parent.apply_settings()
+            parent.update()
+        self.save_manager.save(self.state)
 
     def _reset_save(self):
         reply = QMessageBox.question(
@@ -87,5 +119,10 @@ class SettingsDialog(QDialog):
             new_state = GameState()
             self.state.__dict__.update(new_state.__dict__)
             self.chk_top.setChecked(True)
+            self.chk_status_text.setChecked(False)
+            self.chk_bubble.setChecked(True)
             self.cmb_size.setCurrentIndex(1)
+            self.chk_click_mood.setChecked(True)
+            self.chk_click_animation.setChecked(True)
             self.chk_quiet.setChecked(False)
+            self._save_and_apply()

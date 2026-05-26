@@ -9,9 +9,10 @@ from core.shop_system import ShopSystem
 
 
 class ShopDialog(QDialog):
-    def __init__(self, state: GameState, parent=None):
+    def __init__(self, state: GameState, save_manager=None, parent=None):
         super().__init__(parent)
         self.state = state
+        self.save_manager = save_manager
         self.setWindowTitle("商店")
         self.setMinimumWidth(320)
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
@@ -65,6 +66,8 @@ class ShopDialog(QDialog):
     def _buy(self, item: dict):
         ok, msg = ShopSystem.buy(self.state, item["name"])
         if ok:
+            if self.save_manager is not None:
+                self.save_manager.save(self.state)
             self._refresh()
         # 简单提示通过标题栏显示
         self.setWindowTitle(f"商店 - {msg}")

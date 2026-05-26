@@ -2,9 +2,12 @@
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QLabel, QGroupBox, QFormLayout, QPushButton,
+    QHBoxLayout,
 )
 from PySide6.QtCore import Qt
 from core.game_state import GameState, PetStatus
+from core.game_rules import GameRules
+from core.shop_system import ShopSystem
 
 STATUS_LABELS = {
     PetStatus.IDLE: "待机中",
@@ -16,9 +19,10 @@ STATUS_LABELS = {
 
 
 class StatusPanel(QDialog):
-    def __init__(self, state: GameState, parent=None):
+    def __init__(self, state: GameState, save_manager=None, parent=None):
         super().__init__(parent)
         self.state = state
+        self.save_manager = save_manager
         self.setWindowTitle("宠物状态")
         self.setMinimumWidth(280)
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
@@ -52,6 +56,16 @@ class StatusPanel(QDialog):
         group.setLayout(form)
         layout.addWidget(group)
 
+        feed_row = QHBoxLayout()
+        self.btn_feed_normal = QPushButton("喂普通食物")
+        self.btn_feed_normal.clicked.connect(lambda: self._feed(False))
+        feed_row.addWidget(self.btn_feed_normal)
+
+        self.btn_feed_premium = QPushButton("喂高级食物")
+        self.btn_feed_premium.clicked.connect(lambda: self._feed(True))
+        feed_row.addWidget(self.btn_feed_premium)
+        layout.addLayout(feed_row)
+
         btn_close = QPushButton("关闭")
         btn_close.clicked.connect(self.accept)
         layout.addWidget(btn_close)
@@ -74,3 +88,19 @@ class StatusPanel(QDialog):
         self.lbl_food.setText(str(s.food_count))
         self.lbl_premium.setText(str(s.premium_food_count))
         self.lbl_bed.setText(str(s.bed_level))
+        self.btn_feed_normal.setEnabled(s.food_count > 0)
+        self.btn_feed_premium.setEnabled(s.premium_food_count > 0)
+
+    def _feed(self, is_premium: bool):
+        ok, msg = ShopSystem.use_food(self.state, is_premium=is_premium)
+        if ok:
+            if self.state.click_animation_enabled and not self.state.quiet_mode:
+                self.state.happy_timer = 3
+            GameRules.update_status(self.state)
+            if self.save_manager is not None:
+                self.save_manager.save(self.state)
+            parent = self.parent()
+            if parent is not None:
+                parent.update()
+            self._refresh()
+        self.setWindowTitle(f"宠物状态 - {msg}")

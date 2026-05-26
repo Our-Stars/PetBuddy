@@ -31,6 +31,16 @@ class GameRules:
             return 0.0
 
     @staticmethod
+    def add_natural_coin_income(state: GameState, base_income: float = 1.0) -> int:
+        """按心情倍率累积自然金币收益，返回本次实际入账金币。"""
+        state.natural_coin_progress += base_income * GameRules.get_mood_multiplier(state.mood)
+        gained = int(state.natural_coin_progress)
+        if gained > 0:
+            state.coins += gained
+            state.natural_coin_progress -= gained
+        return gained
+
+    @staticmethod
     def can_click(state: GameState) -> tuple[bool, str]:
         """检查点击冷却"""
         now = time.time()
@@ -70,9 +80,9 @@ class GameRules:
         """根据当前状态优先级自动更新宠物显示状态（非学习/工作状态下调用）"""
         if state.status in (PetStatus.STUDYING, PetStatus.WORKING):
             return
-        if state.happy_timer > 0:
-            state.status = PetStatus.HAPPY
-        elif state.satiety < 30:
+        if state.satiety < 30:
             state.status = PetStatus.HUNGRY
+        elif state.happy_timer > 0:
+            state.status = PetStatus.HAPPY
         else:
             state.status = PetStatus.IDLE

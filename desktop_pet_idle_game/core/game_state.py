@@ -34,6 +34,10 @@ class GameState:
     position_y: int = 700
     pet_size: PetSize = PetSize.MEDIUM
     always_on_top: bool = True
+    show_status_text: bool = False
+    bubble_tips_enabled: bool = True
+    click_mood_enabled: bool = True
+    click_animation_enabled: bool = True
     quiet_mode: bool = False
     last_saved_time: str = ""
 
@@ -41,6 +45,7 @@ class GameState:
     elapsed_seconds: int = field(default=0, repr=False)
     last_click_time: float = field(default=0.0, repr=False)
     happy_timer: int = field(default=0, repr=False)
+    natural_coin_progress: float = field(default=0.0, repr=False)
 
     @property
     def pet_size_pixels(self) -> int:
