@@ -42,7 +42,13 @@ class GameRules:
 
     @staticmethod
     def can_click(state: GameState) -> tuple[bool, str]:
-        """检查点击冷却"""
+        """检查点击（任务中禁止互动）"""
+        if state.status == PetStatus.SLEEPING:
+            return False, "正在睡觉，请勿打扰"
+        if state.status == PetStatus.STUDYING:
+            return False, "正在学习，请勿打扰"
+        if state.status == PetStatus.WORKING:
+            return False, "正在工作，请勿打扰"
         now = time.time()
         if now - state.last_click_time < CLICK_COOLDOWN_SECONDS:
             remaining = int(CLICK_COOLDOWN_SECONDS - (now - state.last_click_time))
@@ -53,6 +59,8 @@ class GameRules:
     def can_study(state: GameState) -> tuple[bool, str]:
         if state.satiety < 30:
             return False, "饱食度不足（<30），无法学习"
+        if state.status == PetStatus.SLEEPING:
+            return False, "正在睡觉，无法学习"
         if state.status == PetStatus.WORKING:
             return False, "正在工作中，无法学习"
         if state.status == PetStatus.STUDYING:
@@ -63,6 +71,8 @@ class GameRules:
     def can_work(state: GameState) -> tuple[bool, str]:
         if state.satiety < 30:
             return False, "饱食度不足（<30），无法工作"
+        if state.status == PetStatus.SLEEPING:
+            return False, "正在睡觉，无法工作"
         if state.status == PetStatus.STUDYING:
             return False, "正在学习中，无法工作"
         if state.status == PetStatus.WORKING:
@@ -71,12 +81,16 @@ class GameRules:
 
     @staticmethod
     def can_feed(state: GameState) -> tuple[bool, str]:
+        if state.status == PetStatus.SLEEPING:
+            return False, "正在睡觉，无法喂食"
         if state.food_count <= 0 and state.premium_food_count <= 0:
             return False, "没有食物，请先去商店购买"
         return True, ""
 
     @staticmethod
     def can_use_toy(state: GameState) -> tuple[bool, str]:
+        if state.status == PetStatus.SLEEPING:
+            return False, "正在睡觉，无法使用玩具"
         if state.toy_count <= 0:
             return False, "没有玩具，请先去商店购买"
         return True, ""
