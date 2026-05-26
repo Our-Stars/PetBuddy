@@ -48,9 +48,11 @@ class GameState:
     natural_coin_progress: float = field(default=0.0, repr=False)
 
     @property
-    def pet_size_pixels(self) -> int:
-        """返回宠物窗口的像素大小"""
-        return {PetSize.SMALL: 100, PetSize.MEDIUM: 150, PetSize.LARGE: 200}[self.pet_size]
+    def pet_size_pixels(self) -> tuple[int, int]:
+        """返回宠物窗口的 (宽, 高)，高度包含进度条空间"""
+        base = {PetSize.SMALL: 100, PetSize.MEDIUM: 150, PetSize.LARGE: 200}[self.pet_size]
+        extra = int(base * 0.15)  # 进度条额外空间
+        return (base, base + extra)
 
     def clamp_values(self):
         """将心情和饱食度限制在 0-100 范围内"""

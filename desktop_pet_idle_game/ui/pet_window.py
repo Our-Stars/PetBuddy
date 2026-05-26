@@ -11,7 +11,7 @@ from PySide6.QtGui import (
 
 from core.game_state import GameState, PetStatus
 from core.game_rules import GameRules
-from core.task_system import TaskSystem
+from core.task_system import TaskSystem, STUDY_DURATION
 from core.shop_system import ShopSystem
 from storage.save_manager import SaveManager
 
@@ -43,7 +43,8 @@ class PetWindow(QMainWindow):
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setAttribute(Qt.WA_ShowWithoutActivating)
         self.setFocusPolicy(Qt.NoFocus)
-        self.setFixedSize(self.state.pet_size_pixels, self.state.pet_size_pixels)
+        w, h = self.state.pet_size_pixels
+        self.setFixedSize(w, h)
         self.setWindowTitle("桌面宠物")
 
     def _init_timer(self):
@@ -64,7 +65,8 @@ class PetWindow(QMainWindow):
         if self.state.always_on_top:
             flags |= Qt.WindowStaysOnTopHint
         self.setWindowFlags(flags)
-        self.setFixedSize(self.state.pet_size_pixels, self.state.pet_size_pixels)
+        w, h = self.state.pet_size_pixels
+        self.setFixedSize(w, h)
         self.show()
 
     # ========== 主循环 ==========
@@ -115,25 +117,35 @@ class PetWindow(QMainWindow):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
 
-        size = self.state.pet_size_pixels
-        scale = size / 150.0  # 基于 150px 设计尺寸缩放
+        base, full_h = self.state.pet_size_pixels
+        scale = base / 150.0
+        offset_y = int((full_h - base) / scale)
 
+        # --- 宠物本体（上移腾出底部空间） ---
+        painter.save()
         painter.scale(scale, scale)
+        painter.translate(0, -offset_y * 0.5)
 
         status = self.state.status
         mood = self.state.mood
         satiety = self.state.satiety
 
-        # 身体
         self._draw_body(painter)
-        # 耳朵
         self._draw_ears(painter)
-        # 脸
         self._draw_face(painter, status)
-        # 表情
         self._draw_expression(painter, status, mood, satiety)
+        painter.restore()
+
+        # --- 状态文字（顶部，不受 translate 影响） ---
         if self.state.show_status_text:
+            painter.save()
+            painter.scale(scale, scale)
             self._draw_status_text(painter)
+            painter.restore()
+
+        # --- 任务进度条（底部） ---
+        if self.state.current_task:
+            self._draw_task_progress(painter, scale, offset_y)
 
         painter.end()
 
@@ -241,8 +253,58 @@ class PetWindow(QMainWindow):
         }
         text = f"{labels.get(self.state.status, '未知')}  金币:{self.state.coins}"
         p.setPen(QPen(QColor("#333333"), 1))
-        p.setFont(QFont("Arial", 8))
-        p.drawText(QRectF(5, 2, 140, 18), Qt.AlignCenter, text)
+        p.setFont(QFont("Arial", 16))
+        p.drawText(QRectF(5, 4, 140, 26), Qt.AlignCenter, text)
+
+    def _draw_task_progress(self, p: QPainter, scale: float, offset_y: int):
+        """在宠物下方绘制任务进度条和时间文字"""
+        s = self.state
+        total = STUDY_DURATION if s.status == PetStatus.STUDYING else 0
+        if s.status == PetStatus.WORKING:
+            job = TaskSystem.get_job_by_name(s.current_task)
+            if job:
+                total = job["duration"]
+        if total <= 0:
+            return
+
+        elapsed = total - s.task_remaining_seconds
+        progress = max(0.0, min(1.0, elapsed / total))
+
+        # 进度条放在宠物下方（设计坐标 y=135，上移一半 offset）
+        bar_x, bar_w, bar_h = 0, 150, 7
+        bar_y = 135 - offset_y // 2
+        radius = 3
+
+        p.save()
+        p.scale(scale, scale)
+
+        # 背景条
+        p.setPen(Qt.NoPen)
+        p.setBrush(QBrush(QColor(200, 200, 200, 160)))
+        p.drawRoundedRect(QRectF(bar_x, bar_y, bar_w, bar_h), radius, radius)
+
+        # 进度条
+        if progress < 0.5:
+            bar_color = QColor("#4CAF50")
+        elif progress < 0.85:
+            bar_color = QColor("#FF9800")
+        else:
+            bar_color = QColor("#F44336")
+        p.setBrush(QBrush(bar_color))
+        p.drawRoundedRect(QRectF(bar_x, bar_y, bar_w * progress, bar_h), radius, radius)
+
+        # 时间文字
+        remaining = s.task_remaining_seconds
+        mins = remaining // 60
+        secs = remaining % 60
+        task_name = s.current_task or ""
+        time_text = f"{task_name} {mins}:{secs:02d} / {total // 60}:{total % 60:02d}"
+
+        p.setPen(QPen(QColor("#555555"), 1))
+        p.setFont(QFont("Arial", 16))
+        p.drawText(QRectF(bar_x, bar_y + bar_h + 2, bar_w, 20), Qt.AlignCenter, time_text)
+
+        p.restore()
 
     # ---- 表情组件 ----
 
