@@ -1,12 +1,13 @@
 """宠物主窗口：无边框透明窗口、拖动、点击、右键菜单、主循环"""
 
+import os
 from PySide6.QtWidgets import (
     QMainWindow, QMenu, QApplication, QToolTip,
 )
 from PySide6.QtCore import Qt, QTimer, QPoint, QPointF, QRectF
 from PySide6.QtGui import (
     QPainter, QBrush, QColor, QPen, QFont, QPainterPath,
-    QMouseEvent, QPolygonF,
+    QMouseEvent, QPolygonF, QPixmap,
 )
 
 from core.game_state import GameState, PetStatus
@@ -14,6 +15,21 @@ from core.game_rules import GameRules
 from core.task_system import TaskSystem, STUDY_DURATION, SLEEP_DURATION
 from core.shop_system import ShopSystem
 from storage.save_manager import SaveManager
+
+STATE_FOLDERS = {
+    PetStatus.IDLE: "idle",
+    PetStatus.HAPPY: "happy",
+    PetStatus.HUNGRY: "hungry",
+    PetStatus.STUDYING: "studying",
+    PetStatus.WORKING: "working",
+    PetStatus.SLEEPING: "sleeping",
+}
+
+ANIM_FPS = 12
+
+
+def _asset_path(filename: str) -> str:
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "assets", filename)
 
 
 class PetWindow(QMainWindow):
@@ -26,8 +42,12 @@ class PetWindow(QMainWindow):
         self.dragging = False
         self.drag_offset = QPoint()
         self.press_global_pos = QPoint()
+        self._frames: dict[PetStatus, list[QPixmap]] = {}
+        self._frame_idx = 0
+        self._current_pixmap: QPixmap | None = None
 
         self._init_window()
+        self._load_frames()
         self._init_timer()
         self._load_position()
         self.apply_settings()
@@ -47,10 +67,44 @@ class PetWindow(QMainWindow):
         self.setFixedSize(w, h)
         self.setWindowTitle("桌面宠物")
 
+    def _load_frames(self):
+        for status, folder in STATE_FOLDERS.items():
+            d = _asset_path(folder)
+            if not os.path.isdir(d):
+                continue
+            frames = []
+            for fname in sorted(os.listdir(d)):
+                if fname.endswith('.png'):
+                    pix = QPixmap(os.path.join(d, fname))
+                    if not pix.isNull():
+                        frames.append(pix)
+            if frames:
+                self._frames[status] = frames
+        self._update_frame()
+
+    def _update_frame(self):
+        frames = self._frames.get(self.state.status)
+        if frames:
+            self._frame_idx = 0
+            self._current_pixmap = frames[0]
+        self.update()
+
+    def _anim_tick(self):
+        frames = self._frames.get(self.state.status)
+        if not frames:
+            return
+        self._frame_idx = (self._frame_idx + 1) % len(frames)
+        self._current_pixmap = frames[self._frame_idx]
+        self.update()
+
     def _init_timer(self):
         self.timer = QTimer(self)
         self.timer.timeout.connect(self._game_tick)
         self.timer.start(1000)
+        # 动画计时器（独立于游戏 tick）
+        self.anim_timer = QTimer(self)
+        self.anim_timer.timeout.connect(self._anim_tick)
+        self.anim_timer.start(int(1000 / ANIM_FPS))
 
     def _load_position(self):
         pos = self._clamp_to_screen(QPoint(self.state.position_x, self.state.position_y))
@@ -103,7 +157,10 @@ class PetWindow(QMainWindow):
             self._show_tip(result["message"])
 
         # 更新宠物显示状态（非任务中）
+        old_status = state.status
         GameRules.update_status(state)
+        if state.status != old_status:
+            self._update_frame()
 
         # 自动保存（每 45 秒）
         if should_save or state.elapsed_seconds % 45 == 0:
@@ -121,22 +178,17 @@ class PetWindow(QMainWindow):
         scale = base / 150.0
         offset_y = int((full_h - base) / scale)
 
-        # --- 宠物本体（上移腾出底部空间） ---
-        painter.save()
-        painter.scale(scale, scale)
-        painter.translate(0, -offset_y * 0.5)
+        # --- GIF 帧（QMovie 自动处理透明色） ---
+        if self._current_pixmap and not self._current_pixmap.isNull():
+            scaled = self._current_pixmap.scaled(
+                base, base + offset_y + 10,
+                Qt.KeepAspectRatio, Qt.SmoothTransformation,
+            )
+            px = (self.width() - scaled.width()) // 2
+            py = (self.height() - scaled.height()) // 2 - offset_y // 2
+            painter.drawPixmap(px, py, scaled)
 
-        status = self.state.status
-        mood = self.state.mood
-        satiety = self.state.satiety
-
-        self._draw_body(painter)
-        self._draw_ears(painter)
-        self._draw_face(painter, status)
-        self._draw_expression(painter, status, mood, satiety)
-        painter.restore()
-
-        # --- 状态文字（顶部，不受 translate 影响） ---
+        # --- 状态文字（顶部） ---
         if self.state.show_status_text:
             painter.save()
             painter.scale(scale, scale)
@@ -148,107 +200,6 @@ class PetWindow(QMainWindow):
             self._draw_task_progress(painter, scale, offset_y)
 
         painter.end()
-
-    def _draw_body(self, p: QPainter):
-        """绘制身体（椭圆）"""
-        body_color = QColor("#FF9F43")  # 橘猫色
-        p.setBrush(QBrush(body_color))
-        p.setPen(QPen(QColor("#E08030"), 2))
-        p.drawEllipse(QPointF(75, 100), 42, 30)
-
-    def _draw_ears(self, p: QPainter):
-        """绘制耳朵"""
-        ear_color = QColor("#FF9F43")
-        inner_ear = QColor("#FFB8B8")
-        p.setBrush(QBrush(ear_color))
-        p.setPen(QPen(QColor("#E08030"), 2))
-
-        # 左耳
-        left_ear = QPolygonF([QPointF(42, 38), QPointF(58, 15), QPointF(70, 35)])
-        p.drawPolygon(left_ear)
-
-        # 右耳
-        right_ear = QPolygonF([QPointF(108, 38), QPointF(92, 15), QPointF(80, 35)])
-        p.drawPolygon(right_ear)
-
-        # 耳朵内部
-        p.setBrush(QBrush(inner_ear))
-        p.setPen(Qt.NoPen)
-        p.drawPolygon(QPolygonF([QPointF(47, 36), QPointF(57, 20), QPointF(64, 34)]))
-        p.drawPolygon(QPolygonF([QPointF(103, 36), QPointF(93, 20), QPointF(86, 34)]))
-
-    def _draw_face(self, p: QPainter, status: PetStatus):
-        """绘制脸部底色"""
-        face_color = QColor("#FFB366")
-        p.setBrush(QBrush(face_color))
-        p.setPen(QPen(QColor("#E08030"), 2))
-        p.drawEllipse(QPointF(75, 60), 32, 28)
-
-    def _draw_expression(self, p: QPainter, status: PetStatus, mood: int, satiety: int):
-        """根据不同状态绘制表情"""
-        p.setPen(QPen(Qt.black, 2))
-
-        if status == PetStatus.HAPPY:
-            # 开心：^_^ 眼睛
-            self._draw_happy_eyes(p)
-            self._draw_smile(p, big=True)
-            # 腮红
-            p.setBrush(QBrush(QColor(255, 150, 150, 80)))
-            p.setPen(Qt.NoPen)
-            p.drawEllipse(QPointF(58, 62), 6, 4)
-            p.drawEllipse(QPointF(92, 62), 6, 4)
-
-        elif status == PetStatus.HUNGRY:
-            # 饥饿：下垂眼 + 难过嘴
-            self._draw_sad_eyes(p)
-            self._draw_sad_mouth(p)
-            # 泪水
-            p.setPen(QPen(QColor("#66CCFF"), 2))
-            p.setBrush(QBrush(QColor("#99DDFF")))
-            p.drawEllipse(QPointF(52, 58), 3, 4)
-
-        elif status == PetStatus.STUDYING:
-            # 学习：眼镜 + 专注
-            self._draw_glasses(p)
-            self._draw_normal_eyes(p)
-            self._draw_small_mouth(p)
-
-        elif status == PetStatus.WORKING:
-            # 工作：坚毅眼神
-            self._draw_determined_eyes(p)
-            self._draw_small_mouth(p)
-            # 汗滴
-            p.setPen(QPen(QColor("#66CCFF"), 1.5))
-            p.setBrush(Qt.NoBrush)
-            p.drawEllipse(QPointF(98, 45), 4, 6)
-
-        elif status == PetStatus.SLEEPING:
-            # 睡觉：闭眼 + zZ
-            self._draw_closed_eyes(p)
-            self._draw_small_mouth(p)
-            p.setPen(QPen(QColor("#6666CC"), 1.5))
-            p.setFont(QFont("Arial", 9))
-            p.drawText(QRectF(88, 38, 30, 14), Qt.AlignLeft, "zZ")
-
-        else:  # IDLE
-            self._draw_normal_eyes(p)
-            self._draw_small_mouth(p)
-
-        # 鼻子
-        p.setPen(Qt.NoPen)
-        p.setBrush(QBrush(QColor("#FF8888")))
-        p.drawEllipse(QPointF(75, 65), 4, 3)
-
-        # 胡须
-        p.setPen(QPen(QColor("#CCCCCC"), 1))
-        # 左侧胡须
-        p.drawLine(QPointF(48, 63), QPointF(28, 58))
-        p.drawLine(QPointF(48, 66), QPointF(26, 66))
-        p.drawLine(QPointF(48, 69), QPointF(28, 74))
-        # 右侧胡须
-        p.drawLine(QPointF(102, 63), QPointF(122, 58))
-        p.drawLine(QPointF(102, 66), QPointF(124, 66))
-        p.drawLine(QPointF(102, 69), QPointF(122, 74))
 
     def _draw_status_text(self, p: QPainter):
         """绘制简要状态文字。"""
@@ -321,109 +272,6 @@ class PetWindow(QMainWindow):
 
     # ---- 表情组件 ----
 
-    def _draw_normal_eyes(self, p: QPainter):
-        p.setBrush(QBrush(Qt.white))
-        p.setPen(QPen(Qt.black, 1.5))
-        p.drawEllipse(QPointF(64, 56), 5, 6)
-        p.drawEllipse(QPointF(86, 56), 5, 6)
-        # 瞳孔
-        p.setBrush(QBrush(Qt.black))
-        p.setPen(Qt.NoPen)
-        p.drawEllipse(QPointF(65, 55), 2.5, 3)
-
-    def _draw_happy_eyes(self, p: QPainter):
-        p.setPen(QPen(Qt.black, 2))
-        p.setBrush(Qt.NoBrush)
-        # ^ ^ 形状用弧线
-        path = QPainterPath()
-        path.moveTo(56, 55)
-        path.cubicTo(60, 48, 64, 48, 68, 55)
-        p.drawPath(path)
-        path2 = QPainterPath()
-        path2.moveTo(82, 55)
-        path2.cubicTo(86, 48, 90, 48, 94, 55)
-        p.drawPath(path2)
-
-    def _draw_sad_eyes(self, p: QPainter):
-        p.setBrush(QBrush(Qt.white))
-        p.setPen(QPen(Qt.black, 1.5))
-        p.drawEllipse(QPointF(64, 58), 5, 5)
-        p.drawEllipse(QPointF(86, 58), 5, 5)
-        # 半闭眼
-        p.setBrush(QBrush(QColor("#FFB366")))
-        p.setPen(Qt.NoPen)
-        p.drawRect(QRectF(58, 56, 12, 3))
-        p.drawRect(QRectF(80, 56, 12, 3))
-        # 瞳孔
-        p.setBrush(QBrush(Qt.black))
-        p.drawEllipse(QPointF(65, 59), 2, 2)
-
-    def _draw_closed_eyes(self, p: QPainter):
-        """睡觉闭眼"""
-        p.setPen(QPen(Qt.black, 2))
-        p.setBrush(Qt.NoBrush)
-        # 两条弧线表示闭眼
-        path = QPainterPath()
-        path.moveTo(58, 56)
-        path.cubicTo(61, 60, 67, 60, 70, 56)
-        p.drawPath(path)
-        path2 = QPainterPath()
-        path2.moveTo(80, 56)
-        path2.cubicTo(83, 60, 89, 60, 92, 56)
-        p.drawPath(path2)
-
-    def _draw_determined_eyes(self, p: QPainter):
-        p.setBrush(QBrush(Qt.white))
-        p.setPen(QPen(Qt.black, 2))
-        p.drawEllipse(QPointF(64, 56), 5, 5)
-        p.drawEllipse(QPointF(86, 56), 5, 5)
-        # 小瞳孔（坚毅）
-        p.setBrush(QBrush(Qt.black))
-        p.setPen(Qt.NoPen)
-        p.drawEllipse(QPointF(64, 56), 2, 2)
-        p.drawEllipse(QPointF(86, 56), 2, 2)
-        # 眉毛
-        p.setPen(QPen(Qt.black, 2))
-        p.drawLine(QPointF(58, 49), QPointF(70, 50))
-        p.drawLine(QPointF(92, 50), QPointF(80, 49))
-
-    def _draw_glasses(self, p: QPainter):
-        p.setPen(QPen(QColor("#333333"), 1.5))
-        p.setBrush(Qt.NoBrush)
-        p.drawEllipse(QPointF(64, 56), 8, 8)
-        p.drawEllipse(QPointF(86, 56), 8, 8)
-        p.drawLine(QPointF(72, 56), QPointF(78, 56))
-
-    def _draw_smile(self, p: QPainter, big: bool = False):
-        p.setPen(QPen(Qt.black, 2))
-        p.setBrush(Qt.NoBrush)
-        if big:
-            path = QPainterPath()
-            path.moveTo(68, 70)
-            path.cubicTo(72, 78, 78, 78, 82, 70)
-            p.drawPath(path)
-        else:
-            path = QPainterPath()
-            path.moveTo(70, 72)
-            path.cubicTo(73, 76, 77, 76, 80, 72)
-            p.drawPath(path)
-
-    def _draw_small_mouth(self, p: QPainter):
-        p.setPen(QPen(Qt.black, 1.5))
-        p.setBrush(Qt.NoBrush)
-        path = QPainterPath()
-        path.moveTo(72, 71)
-        path.cubicTo(74, 73, 76, 73, 78, 71)
-        p.drawPath(path)
-
-    def _draw_sad_mouth(self, p: QPainter):
-        p.setPen(QPen(Qt.black, 2))
-        p.setBrush(Qt.NoBrush)
-        path = QPainterPath()
-        path.moveTo(70, 75)
-        path.cubicTo(73, 72, 77, 72, 80, 75)
-        p.drawPath(path)
-
     # ========== 鼠标事件 ==========
 
     def mousePressEvent(self, event: QMouseEvent):
@@ -482,6 +330,7 @@ class PetWindow(QMainWindow):
             self.state.happy_timer = 3  # 开心 3 秒
             self.state.status = PetStatus.HAPPY
         GameRules.update_status(self.state)
+        self._update_frame()
         self.save_manager.save(self.state)
         self._show_tip("心情 +3" if self.state.click_mood_enabled else "已互动")
         self.update()
@@ -574,6 +423,7 @@ class PetWindow(QMainWindow):
             if self.state.click_animation_enabled and not self.state.quiet_mode:
                 self.state.happy_timer = 3
             GameRules.update_status(self.state)
+            self._update_frame()
             self.save_manager.save(self.state)
         self._show_tip(msg)
         self.update()
@@ -584,6 +434,7 @@ class PetWindow(QMainWindow):
             if self.state.click_animation_enabled and not self.state.quiet_mode:
                 self.state.happy_timer = 3
             GameRules.update_status(self.state)
+            self._update_frame()
             self.save_manager.save(self.state)
         self._show_tip(msg)
         self.update()
@@ -594,6 +445,7 @@ class PetWindow(QMainWindow):
             self._show_tip(msg)
             return
         TaskSystem.start_study(self.state)
+        self._update_frame()
         self.save_manager.save(self.state)
         self._show_tip("开始学习")
         self.update()
@@ -604,6 +456,7 @@ class PetWindow(QMainWindow):
             self._show_tip(msg)
             return
         TaskSystem.start_sleep(self.state)
+        self._update_frame()
         self.save_manager.save(self.state)
         self._show_tip("开始睡觉")
         self.update()
@@ -614,6 +467,7 @@ class PetWindow(QMainWindow):
             if self.state.click_animation_enabled and not self.state.quiet_mode:
                 self.state.happy_timer = 3
             GameRules.update_status(self.state)
+            self._update_frame()
             self.save_manager.save(self.state)
         self._show_tip(msg)
         self.update()
@@ -629,6 +483,7 @@ class PetWindow(QMainWindow):
             job = TaskSystem.get_job_by_name(dlg.selected_job)
             if job and self.state.knowledge >= job["knowledge"]:
                 TaskSystem.start_work(self.state, dlg.selected_job)
+                self._update_frame()
                 self.save_manager.save(self.state)
                 self._show_tip(f"开始工作：{dlg.selected_job}")
                 self.update()
@@ -636,6 +491,7 @@ class PetWindow(QMainWindow):
     def _cancel_current_task(self):
         ok, msg = TaskSystem.cancel_current_task(self.state)
         if ok:
+            self._update_frame()
             self.save_manager.save(self.state)
         self._show_tip(msg)
         self.update()
