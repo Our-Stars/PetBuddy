@@ -1,4 +1,4 @@
-"""学习和工作任务系统"""
+"""学习、工作和睡觉任务系统"""
 
 from .game_state import GameState, PetStatus
 
@@ -7,8 +7,13 @@ STUDY_DURATION = 60  # 秒
 STUDY_KNOWLEDGE_GAIN = 1
 
 # 睡觉配置
-SLEEP_DURATION = 30  # 秒
-SLEEP_MOOD_RECOVERY = 20
+SLEEP_OPTIONS = [
+    {"name": "小睡 5分钟", "duration": 300, "mood_recovery": 10},
+    {"name": "午睡 15分钟", "duration": 900, "mood_recovery": 30},
+    {"name": "长睡 40分钟", "duration": 2400, "mood_recovery": 80},
+]
+DEFAULT_SLEEP_NAME = SLEEP_OPTIONS[0]["name"]
+LEGACY_SLEEP_NAME = "睡觉"
 
 # 工作列表
 JOBS = [
@@ -31,6 +36,15 @@ class TaskSystem:
         for j in JOBS:
             if j["name"] == name:
                 return j
+        return None
+
+    @staticmethod
+    def get_sleep_option_by_name(name: str | None) -> dict | None:
+        if name == LEGACY_SLEEP_NAME:
+            return SLEEP_OPTIONS[0]
+        for option in SLEEP_OPTIONS:
+            if option["name"] == name:
+                return option
         return None
 
     @staticmethod
@@ -63,15 +77,18 @@ class TaskSystem:
         return True
 
     @staticmethod
-    def start_sleep(state: GameState) -> bool:
+    def start_sleep(state: GameState, option_name: str = DEFAULT_SLEEP_NAME) -> bool:
         """开始睡觉，返回是否成功"""
         from .game_rules import GameRules
         can_start, _ = GameRules.can_sleep(state)
         if not can_start:
             return False
+        option = TaskSystem.get_sleep_option_by_name(option_name)
+        if option is None:
+            return False
         state.status = PetStatus.SLEEPING
-        state.current_task = "睡觉"
-        state.task_remaining_seconds = SLEEP_DURATION
+        state.current_task = option["name"]
+        state.task_remaining_seconds = option["duration"]
         return True
 
     @staticmethod
@@ -118,9 +135,11 @@ class TaskSystem:
         result = {"task": state.current_task, "type": "", "message": ""}
 
         if state.status == PetStatus.SLEEPING:
-            state.mood = min(100, state.mood + SLEEP_MOOD_RECOVERY)
+            option = TaskSystem.get_sleep_option_by_name(state.current_task)
+            recovery = option["mood_recovery"] if option else 0
+            state.mood = min(100, state.mood + recovery)
             result["type"] = "sleep"
-            result["message"] = f"睡醒了！心情 +{SLEEP_MOOD_RECOVERY}"
+            result["message"] = f"睡醒了！心情 +{recovery}"
         elif state.status == PetStatus.STUDYING:
             from .game_rules import GameRules
             mult = TaskSystem._study_knowledge_multiplier(state)

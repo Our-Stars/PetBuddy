@@ -48,3 +48,8 @@ save_backup.json
 *.log
 logs/
 
+# AI 辅助开发文档与本地测试材料
+CLAUDE.md
+AGENTS.md
+需求文档.txt
+tests/

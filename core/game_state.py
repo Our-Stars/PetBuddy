@@ -22,8 +22,8 @@ class PetSize(Enum):
 @dataclass
 class GameState:
     coins: int = 0
-    mood: int = 80
-    satiety: int = 80
+    mood: float = 80
+    satiety: float = 80
     knowledge: float = 0.0
     status: PetStatus = PetStatus.IDLE
     food_count: int = 0

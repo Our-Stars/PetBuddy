@@ -12,7 +12,7 @@ from PySide6.QtGui import (
 
 from core.game_state import GameState, PetStatus
 from core.game_rules import GameRules
-from core.task_system import TaskSystem, STUDY_DURATION, SLEEP_DURATION
+from core.task_system import TaskSystem, STUDY_DURATION, SLEEP_OPTIONS
 from core.shop_system import ShopSystem
 from storage.save_manager import SaveManager
 
@@ -108,17 +108,18 @@ class PetWindow(QMainWindow):
         state.elapsed_seconds += 1
         should_save = False
 
-        # 每 30 秒自然金币
-        if state.elapsed_seconds % 30 == 0:
+        # 每 60 秒自然金币，基础值为 1，受心情倍率影响
+        if state.elapsed_seconds % 60 == 0:
             gained = GameRules.add_natural_coin_income(state)
             should_save = should_save or gained > 0
 
-        # 每 60 秒心情和饱食度下降
+        # 每 60 秒心情和饱食度下降，睡觉时饱食度消耗减半
         if state.elapsed_seconds % 60 == 0:
             old_mood = state.mood
             old_satiety = state.satiety
             state.mood = max(0, state.mood - 1)
-            state.satiety = max(0, state.satiety - 1)
+            satiety_cost = 0.5 if state.status == PetStatus.SLEEPING else 1
+            state.satiety = max(0, state.satiety - satiety_cost)
             should_save = should_save or state.mood != old_mood or state.satiety != old_satiety
 
         # Happy 计时器
@@ -220,7 +221,9 @@ class PetWindow(QMainWindow):
         if s.status == PetStatus.STUDYING:
             total = STUDY_DURATION
         elif s.status == PetStatus.SLEEPING:
-            total = SLEEP_DURATION
+            sleep_option = TaskSystem.get_sleep_option_by_name(s.current_task)
+            if sleep_option:
+                total = sleep_option["duration"]
         elif s.status == PetStatus.WORKING:
             job = TaskSystem.get_job_by_name(s.current_task)
             if job:
@@ -373,12 +376,16 @@ class PetWindow(QMainWindow):
         work_action.triggered.connect(self._open_work_dialog)
 
         # 睡觉
-        sleep_action = menu.addAction("睡觉")
+        sleep_menu = menu.addMenu("睡觉")
         can_sleep, sleep_msg = GameRules.can_sleep(self.state)
-        sleep_action.setEnabled(can_sleep)
+        sleep_menu.setEnabled(can_sleep)
         if not can_sleep:
-            sleep_action.setToolTip(sleep_msg)
-        sleep_action.triggered.connect(self._start_sleep)
+            sleep_menu.setToolTip(sleep_msg)
+        for option in SLEEP_OPTIONS:
+            mins = option["duration"] // 60
+            action = sleep_menu.addAction(f"{mins}分钟（心情 +{option['mood_recovery']}）")
+            action.setEnabled(can_sleep)
+            action.triggered.connect(lambda checked=False, name=option["name"]: self._start_sleep(name))
 
         # 使用玩具
         toy_action = menu.addAction(f"使用玩具（{self.state.toy_count}个）")
@@ -449,15 +456,18 @@ class PetWindow(QMainWindow):
         self._show_tip("开始学习")
         self.update()
 
-    def _start_sleep(self):
+    def _start_sleep(self, option_name: str):
         can, msg = GameRules.can_sleep(self.state)
         if not can:
             self._show_tip(msg)
             return
-        TaskSystem.start_sleep(self.state)
+        option = TaskSystem.get_sleep_option_by_name(option_name)
+        if option is None or not TaskSystem.start_sleep(self.state, option_name):
+            self._show_tip("睡觉选项不存在")
+            return
         self._update_frame()
         self.save_manager.save(self.state)
-        self._show_tip("开始睡觉")
+        self._show_tip(f"开始睡觉：{option_name}")
         self.update()
 
     def _use_toy(self):
