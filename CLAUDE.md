@@ -12,6 +12,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 |------|------|
 | 语言 | Python 3.11+ |
 | GUI | PySide6（无边框透明窗口、右键菜单、对话框） |
+| 宠物渲染 | QPixmap 加载 PNG 静态图片（`assets/Original static image/`，6 种状态各一张） |
 | 本地存档 | JSON 文件（原子写入：先写临时文件再替换） |
 | 定时器 | QTimer（主循环 1 秒/次） |
 | 打包 | PyInstaller（macOS → .app，Windows → .exe） |
@@ -25,7 +26,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 desktop_pet_idle_game/
 ├── main.py                  # 入口：初始化应用、读档、创建窗口、退出保存
 ├── requirements.txt         # PySide6>=6.5.0, pyinstaller>=6.0
-├── assets/                  # 图片/GIF/图标资源（目前宠物用 QPainter 绘制，无实际素材文件）
+├── assets/                  # 6 张 PNG 静态图片（每种状态一张）+ 预留素材目录
 ├── core/                    # 游戏逻辑层（纯 Python，不依赖 PySide6）
 │   ├── game_state.py        # GameState 数据类 + PetStatus/PetSize 枚举
 │   ├── game_rules.py        # 收益计算、倍率、条件判断、自然金币累积
@@ -79,27 +80,35 @@ pyinstaller --onefile --windowed --add-data "assets;assets" main.py
 | coins | int | 是 | 金币 |
 | mood | int | 是 | 心情 0-100 |
 | satiety | int | 是 | 饱食度 0-100 |
-| knowledge | int | 是 | 学识 |
+| knowledge | float | 是 | 学识（支持小数，低状态时收益减半会产生 0.5） |
 | status | PetStatus | 是 | 当前状态 |
-| current_task / task_remaining_seconds | str/int | 是 | 当前任务及剩余秒数 |
+| food_count / premium_food_count | int | 是 | 普通/高级食物库存 |
+| toy_count | int | 是 | 玩具库存 |
+| bed_level | int | 是 | 小床等级 |
+| current_task / task_remaining_seconds | str/int | 是 | 当前任务名及剩余秒数 |
+| position_x / position_y | int | 是 | 窗口位置 |
+| pet_size | PetSize | 是 | 宠物大小（small/medium/large） |
 | always_on_top | bool | 是 | 置顶开关 |
 | show_status_text | bool | 是 | 宠物旁显示状态文字 |
 | bubble_tips_enabled | bool | 是 | 气泡提示开关 |
-| click_mood_enabled | bool | 是 | 点击是否增加心情 |
-| click_animation_enabled | bool | 是 | 点击是否显示开心动画 |
-| quiet_mode | bool | 是 | 安静模式 |
+| click_mood_enabled | bool | 是 | 点击是否增加心情（+3） |
+| click_animation_enabled | bool | 是 | 点击是否显示开心动画（happy_timer=3） |
+| quiet_mode | bool | 是 | 安静模式（抑制提示和动画） |
+| last_saved_time | str | 是 | 上次存档时间 ISO 格式 |
 | natural_coin_progress | float | 否 | 自然金币累积进度（小数，防止截断损失） |
 | elapsed_seconds | int | 否 | 程序运行秒数 |
+| last_click_time | float | 否 | 上次点击时间戳（用于 10 秒冷却） |
+| happy_timer | int | 否 | 开心状态剩余秒数 |
 
 ### 主循环逻辑（_game_tick, 1秒/次）
 
-1. 每 10 秒：`GameRules.add_natural_coin_income()` 按心情倍率累积金币（小数精度，不丢失零头）
+1. 每 30 秒：`GameRules.add_natural_coin_income()` 按心情倍率累积金币（小数精度，不丢失零头）
 2. 每 60 秒：心情 -1、饱食度 -1
 3. happy_timer 倒计时
-4. `TaskSystem.tick()` 推进任务倒计时（学习在低心情/低饱食度时每 2 秒才推进 1 秒）
-5. `TaskSystem.check_completion()` 检查任务是否完成并结算
+4. `TaskSystem.tick()` 推进任务倒计时（无条件每秒 -1）
+5. `TaskSystem.check_completion()` 检查任务是否完成并结算（学习收益在 mood<20 或 satiety<60 时减半）
 6. `GameRules.update_status()` 刷新宠物显示状态
-7. 每 45 秒自动保存
+7. 有变更或每 45 秒自动保存（`should_save` 或 `elapsed_seconds % 45 == 0`）
 8. 置顶模式下每 2 秒 `raise_()` 保持窗口在前
 
 ### 心情倍率（影响金币/工作收益）
@@ -111,12 +120,36 @@ pyinstaller --onefile --windowed --add-data "assets;assets" main.py
 | 20-49 | 0.7x |
 | 0-19 | 0.3x |
 
+### 点击互动
+
+- 点击宠物：心情 +3（可在设置中关闭），触发 3 秒开心状态
+- 点击冷却：10 秒（`CLICK_COOLDOWN_SECONDS`），冷却期间显示剩余秒数
+- 任务中（学习/工作/睡觉）禁止点击互动
+
+### 睡觉
+
+- 时长 30 秒（`SLEEP_DURATION`）
+- 完成后心情 +20（`SLEEP_MOOD_RECOVERY`）
+- 睡觉期间不能喂食、使用玩具、点击互动
+- 学习和工作中不能睡觉
+
+### 商店商品
+
+| 商品 | 价格 | 效果 |
+|------|------|------|
+| 普通食物 | 20G | 饱食度 +20 |
+| 高级食物 | 80G | 饱食度 +50，心情 +5 |
+| 玩具 | 50G | 心情 +15（背包道具，可随时使用） |
+| 小床升级 | 200G | 小床等级 +1 |
+
+食物和玩具购买后存入背包，通过右键菜单或状态面板使用。
+
 ### 饱食度门槛
 
 | 范围 | 效果 |
 |------|------|
 | 60-100 | 正常 |
-| 30-59 | 工作/学习收益减半；学习速度减半 |
+| 30-59 | 工作收益减半；学习学识收益减半 |
 | 0-29 | 拒绝学习和工作 |
 
 ### 状态优先级
