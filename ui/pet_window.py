@@ -234,19 +234,20 @@ class PetWindow(QMainWindow):
         elapsed = total - s.task_remaining_seconds
         progress = max(0.0, min(1.0, elapsed / total))
 
-        # 进度条放在宠物图片下沿
-        status_h = 60 if self.state.show_status_text else 0
-        pet_bottom_design = (status_h + base * 0.85) / scale
-        bar_x, bar_w, bar_h = 0, 150, 7
-        bar_y = max(135, pet_bottom_design)
-        radius = 3
-
-        p.save()
-        p.scale(scale, scale)
+        # 进度条固定用窗口像素绘制，避免随宠物缩放后太细或被裁切。
+        margin = 12
+        bar_x = margin
+        bar_w = self.width() - margin * 2
+        bar_h = 11
+        text_h = 28
+        gap = 4
+        bottom_margin = 8
+        bar_y = self.height() - bottom_margin - text_h - gap - bar_h
+        radius = 6
 
         # 背景条
-        p.setPen(Qt.NoPen)
-        p.setBrush(QBrush(QColor(200, 200, 200, 160)))
+        p.setPen(QPen(QColor(80, 80, 80, 170), 1))
+        p.setBrush(QBrush(QColor(235, 235, 235, 210)))
         p.drawRoundedRect(QRectF(bar_x, bar_y, bar_w, bar_h), radius, radius)
 
         # 进度条
@@ -256,6 +257,7 @@ class PetWindow(QMainWindow):
             bar_color = QColor("#FF9800")
         else:
             bar_color = QColor("#F44336")
+        p.setPen(Qt.NoPen)
         p.setBrush(QBrush(bar_color))
         p.drawRoundedRect(QRectF(bar_x, bar_y, bar_w * progress, bar_h), radius, radius)
 
@@ -263,14 +265,11 @@ class PetWindow(QMainWindow):
         remaining = s.task_remaining_seconds
         mins = remaining // 60
         secs = remaining % 60
-        task_name = s.current_task or ""
-        time_text = f"{task_name} {mins}:{secs:02d} / {total // 60}:{total % 60:02d}"
+        time_text = f"{mins}:{secs:02d} / {total // 60}:{total % 60:02d}"
 
         p.setPen(QPen(QColor("#555555"), 1))
-        p.setFont(QFont("Arial", 16))
-        p.drawText(QRectF(bar_x, bar_y + bar_h + 2, bar_w, 20), Qt.AlignCenter, time_text)
-
-        p.restore()
+        p.setFont(QFont("Arial", max(18, int(11 * scale))))
+        p.drawText(QRectF(bar_x, bar_y + bar_h + gap, bar_w, text_h), Qt.AlignCenter, time_text)
 
     # ---- 表情组件 ----
 
