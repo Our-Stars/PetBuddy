@@ -51,8 +51,8 @@ python main.py
 | Item | Rule |
 | --- | --- |
 | Passive coins | Base +1 per minute, affected by mood multiplier |
-| Mood decay | Idle -1/min, studying/working -1.2/min, sleeping no decay |
-| Satiety decay | Idle -1/min, studying/working -1.2/min, sleeping -0.5/min |
+| Mood decay | Idle -0.5/min, studying/working -0.6/min, sleeping no decay |
+| Satiety decay | Idle -0.5/min, studying/working -0.6/min, sleeping -0.2/min |
 | Click interaction | 10-second cooldown, mood +3 |
 | Study | 5 minutes, knowledge +1 |
 | Sleep | 5 / 15 / 40 minutes, mood +5 / +18 / +50 |
