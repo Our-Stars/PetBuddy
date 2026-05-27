@@ -3,14 +3,14 @@
 from .game_state import GameState, PetStatus
 
 # 学习配置
-STUDY_DURATION = 60  # 秒
+STUDY_DURATION = 300  # 秒
 STUDY_KNOWLEDGE_GAIN = 1
 
 # 睡觉配置
 SLEEP_OPTIONS = [
-    {"name": "小睡 5分钟", "duration": 300, "mood_recovery": 10},
-    {"name": "午睡 15分钟", "duration": 900, "mood_recovery": 30},
-    {"name": "长睡 40分钟", "duration": 2400, "mood_recovery": 80},
+    {"name": "小睡 5分钟", "duration": 300, "mood_recovery": 5},
+    {"name": "午睡 15分钟", "duration": 900, "mood_recovery": 18},
+    {"name": "长睡 40分钟", "duration": 2400, "mood_recovery": 50},
 ]
 DEFAULT_SLEEP_NAME = SLEEP_OPTIONS[0]["name"]
 LEGACY_SLEEP_NAME = "睡觉"
