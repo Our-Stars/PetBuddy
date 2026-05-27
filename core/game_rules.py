@@ -22,13 +22,8 @@ class GameRules:
 
     @staticmethod
     def get_satiety_multiplier(satiety: int) -> float:
-        """饱食度对学习和工作收益的影响"""
-        if satiety >= 60:
-            return 1.0
-        elif satiety >= 30:
-            return 0.5
-        else:
-            return 0.0
+        """当前任务收益不按结束时饱食度惩罚。"""
+        return 1.0
 
     @staticmethod
     def add_natural_coin_income(state: GameState, base_income: float = 1.0) -> int:

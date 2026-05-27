@@ -6,10 +6,10 @@ from .game_state import GameState
 SHOP_ITEMS = [
     {"name": "普通食物", "price": 20, "effect": "satiety", "value": 20, "mood_bonus": 0, "type": "food",
      "desc": "饱食度 +20"},
-    {"name": "高级食物", "price": 80, "effect": "satiety", "value": 50, "mood_bonus": 5, "type": "premium_food",
+    {"name": "高级食物", "price": 50, "effect": "satiety", "value": 50, "mood_bonus": 5, "type": "premium_food",
      "desc": "饱食度 +50，心情 +5"},
-    {"name": "玩具", "price": 50, "effect": "mood", "value": 15, "mood_bonus": 0, "type": "toy",
-     "desc": "心情 +15（购买后存入背包，可随时使用）"},
+    {"name": "玩具", "price": 20, "effect": "mood", "value": 20, "mood_bonus": 0, "type": "toy",
+     "desc": "心情 +20（购买后存入背包，可随时使用）"},
     {"name": "小床升级", "price": 200, "effect": "bed", "value": 1, "mood_bonus": 0, "type": "upgrade",
      "desc": "小床等级 +1"},
 ]
@@ -21,13 +21,16 @@ class ShopSystem:
         return SHOP_ITEMS
 
     @staticmethod
+    def get_item_by_name(item_name: str) -> dict | None:
+        for item in SHOP_ITEMS:
+            if item["name"] == item_name:
+                return item
+        return None
+
+    @staticmethod
     def buy(state: GameState, item_name: str) -> tuple[bool, str]:
         """购买商品，返回 (成功, 消息)"""
-        item = None
-        for i in SHOP_ITEMS:
-            if i["name"] == item_name:
-                item = i
-                break
+        item = ShopSystem.get_item_by_name(item_name)
         if item is None:
             return False, "商品不存在"
 
@@ -56,25 +59,32 @@ class ShopSystem:
         if is_premium:
             if state.premium_food_count <= 0:
                 return False, "没有高级食物"
+            item = ShopSystem.get_item_by_name("高级食物")
+            satiety_gain = item["value"]
+            mood_gain = item["mood_bonus"]
             state.premium_food_count -= 1
-            state.satiety = min(100, state.satiety + 50)
-            state.mood = min(100, state.mood + 5)
+            state.satiety = min(100, state.satiety + satiety_gain)
+            state.mood = min(100, state.mood + mood_gain)
             state.clamp_values()
-            return True, "喂食高级食物！饱食度 +50，心情 +5"
+            return True, f"喂食高级食物！饱食度 +{satiety_gain}，心情 +{mood_gain}"
         else:
             if state.food_count <= 0:
                 return False, "没有普通食物"
+            item = ShopSystem.get_item_by_name("普通食物")
+            satiety_gain = item["value"]
             state.food_count -= 1
-            state.satiety = min(100, state.satiety + 20)
+            state.satiety = min(100, state.satiety + satiety_gain)
             state.clamp_values()
-            return True, "喂食普通食物！饱食度 +20"
+            return True, f"喂食普通食物！饱食度 +{satiety_gain}"
 
     @staticmethod
     def use_toy(state: GameState) -> tuple[bool, str]:
         """使用玩具，返回 (成功, 消息)"""
         if state.toy_count <= 0:
             return False, "没有玩具"
+        item = ShopSystem.get_item_by_name("玩具")
+        mood_gain = item["value"]
         state.toy_count -= 1
-        state.mood = min(100, state.mood + 15)
+        state.mood = min(100, state.mood + mood_gain)
         state.clamp_values()
-        return True, "使用了玩具！心情 +15"
+        return True, f"使用了玩具！心情 +{mood_gain}"

@@ -118,13 +118,6 @@ class TaskSystem:
         state.task_remaining_seconds -= 1
 
     @staticmethod
-    def _study_knowledge_multiplier(state: GameState) -> float:
-        """心情 < 20 或饱食度 < 60 时学识收益减半"""
-        if state.mood < 20 or state.satiety < 60:
-            return 0.5
-        return 1.0
-
-    @staticmethod
     def check_completion(state: GameState) -> dict | None:
         """检查任务是否完成，完成则结算并返回结果；未完成返回 None"""
         if state.task_remaining_seconds > 0:
@@ -141,29 +134,17 @@ class TaskSystem:
             result["type"] = "sleep"
             result["message"] = f"睡醒了！心情 +{recovery}"
         elif state.status == PetStatus.STUDYING:
-            from .game_rules import GameRules
-            mult = TaskSystem._study_knowledge_multiplier(state)
-            gain = STUDY_KNOWLEDGE_GAIN * mult
+            gain = STUDY_KNOWLEDGE_GAIN
             state.knowledge += gain
             result["type"] = "study"
-            if mult < 1.0:
-                result["message"] = f"学习完成！学识 +{gain:.1f}（低心情/低饱食度减半）"
-            else:
-                result["message"] = f"学习完成！学识 +{gain:.0f}"
+            result["message"] = f"学习完成！学识 +{gain:.0f}"
         elif state.status == PetStatus.WORKING:
             job = TaskSystem.get_job_by_name(state.current_task)
             if job:
-                base_reward = job["reward"]
-                from .game_rules import GameRules
-                mood_mult = GameRules.get_mood_multiplier(state.mood)
-                satiety_mult = GameRules.get_satiety_multiplier(state.satiety)
-
-                reward = int(base_reward * mood_mult * satiety_mult)
+                reward = job["reward"]
                 state.coins += reward
                 result["type"] = "work"
                 result["message"] = f"工作完成：{state.current_task}！获得 {reward} 金币"
-                if mood_mult != 1.0 or satiety_mult != 1.0:
-                    result["message"] += f"（心情倍率 {mood_mult}x，饱食度倍率 {satiety_mult}x）"
 
         # 恢复状态
         state.current_task = None
