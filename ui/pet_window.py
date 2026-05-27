@@ -113,12 +113,19 @@ class PetWindow(QMainWindow):
             gained = GameRules.add_natural_coin_income(state)
             should_save = should_save or gained > 0
 
-        # 每 60 秒心情和饱食度下降，睡觉时饱食度消耗减半
+        # 每 60 秒心情和饱食度下降；学习/工作总消耗略高，睡觉时只消耗少量饱食度。
         if state.elapsed_seconds % 60 == 0:
             old_mood = state.mood
             old_satiety = state.satiety
-            state.mood = max(0, state.mood - 1)
-            satiety_cost = 0.5 if state.status == PetStatus.SLEEPING else 1
+            mood_cost = 1
+            satiety_cost = 1
+            if state.status in (PetStatus.STUDYING, PetStatus.WORKING):
+                mood_cost = 1.2
+                satiety_cost = 1.2
+            elif state.status == PetStatus.SLEEPING:
+                mood_cost = 0
+                satiety_cost = 0.5
+            state.mood = max(0, state.mood - mood_cost)
             state.satiety = max(0, state.satiety - satiety_cost)
             should_save = should_save or state.mood != old_mood or state.satiety != old_satiety
 
