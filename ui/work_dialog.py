@@ -4,8 +4,8 @@ from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QLabel, QPushButton, QHBoxLayout, QFrame, QScrollArea, QWidget,
 )
 from PySide6.QtCore import Qt
+from core.game_rules import GameRules
 from core.game_state import GameState
-from core.task_system import TaskSystem
 
 CARD_STYLE = """
 QFrame {
@@ -59,6 +59,10 @@ class WorkDialog(QDialog):
         self.lbl_knowledge.setStyleSheet("font-size: 16px; font-weight: bold; margin: 8px;")
         layout.addWidget(self.lbl_knowledge)
 
+        self.lbl_reason = QLabel()
+        self.lbl_reason.setStyleSheet("font-size: 13px; margin: 0 8px 8px 8px;")
+        layout.addWidget(self.lbl_reason)
+
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.NoFrame)
@@ -92,10 +96,12 @@ class WorkDialog(QDialog):
 
         row.addStretch()
 
+        can_work, _ = GameRules.can_work(self.state)
         unlocked = self.state.knowledge >= job["knowledge"]
-        btn = QPushButton("开始工作" if unlocked else "未解锁")
-        btn.setEnabled(unlocked)
-        if unlocked:
+        enabled = can_work and unlocked
+        btn = QPushButton("开始工作" if enabled else ("无法工作" if unlocked else "未解锁"))
+        btn.setEnabled(enabled)
+        if enabled:
             btn.clicked.connect(lambda checked=False, j=job: self._select(j))
         row.addWidget(btn)
 
@@ -107,3 +113,5 @@ class WorkDialog(QDialog):
 
     def _refresh(self):
         self.lbl_knowledge.setText(f"当前学识：{self.state.knowledge}")
+        can_work, reason = GameRules.can_work(self.state)
+        self.lbl_reason.setText("" if can_work else reason)

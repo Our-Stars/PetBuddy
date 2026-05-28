@@ -15,8 +15,10 @@ The app is fully local. It does not use accounts, online services, or a database
 - Transparent, frameless, draggable, always-on-top pet window
 - Static pet images for idle, happy, hungry, studying, working, and sleeping states
 - Click interaction with mood gain
-- Context menu for feeding, studying, working, sleeping, shop, status, and settings
-- Study task: 5 minutes for 1 knowledge
+- Context menu for feeding, studying, working, sleeping, playing, shop, status, and settings
+- Feeding, studying, working, sleeping, and playing all open a choice dialog before execution
+- Feeding, playing, and click interactions are unavailable while studying, working, or sleeping
+- Study tasks: 5 / 15 / 40 minutes for 1 / 3.5 / 10 knowledge
 - Work tasks unlocked by knowledge level
 - Sleep tasks: 5 / 15 / 40 minutes with mood recovery
 - Shop items: normal food, premium food, toy, and bed upgrade
@@ -55,7 +57,7 @@ python main.py
 | Mood decay | Idle -0.5/min, studying/working -0.6/min, sleeping no decay |
 | Satiety decay | Idle -0.5/min, studying/working -0.6/min, sleeping -0.2/min |
 | Click interaction | 10-second cooldown, mood +3 |
-| Study | 5 minutes, knowledge +1 |
+| Study | 5 / 15 / 40 minutes, knowledge +1 / +3.5 / +10 |
 | Sleep | 5 / 15 / 40 minutes, mood +5 / +18 / +50 |
 
 ### Mood Multiplier

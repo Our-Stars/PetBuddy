@@ -12,7 +12,7 @@ from PySide6.QtGui import (
 
 from core.game_state import GameState, PetStatus
 from core.game_rules import GameRules
-from core.task_system import TaskSystem, STUDY_DURATION, SLEEP_OPTIONS
+from core.task_system import TaskSystem
 from core.shop_system import ShopSystem
 from storage.save_manager import SaveManager
 
@@ -226,7 +226,9 @@ class PetWindow(QMainWindow):
         s = self.state
         total = 0
         if s.status == PetStatus.STUDYING:
-            total = STUDY_DURATION
+            study_option = TaskSystem.get_study_option_by_name(s.current_task)
+            if study_option:
+                total = study_option["duration"]
         elif s.status == PetStatus.SLEEPING:
             sleep_option = TaskSystem.get_sleep_option_by_name(s.current_task)
             if sleep_option:
@@ -348,53 +350,25 @@ class PetWindow(QMainWindow):
         menu = QMenu(self)
         menu.setStyleSheet("QMenu { font-size: 14px; padding: 4px; }")
 
-        # 喂食子菜单
-        feed_menu = menu.addMenu("喂食")
-        feed_menu.setEnabled(GameRules.can_feed(self.state)[0])
-
-        normal_action = feed_menu.addAction(f"普通食物（{self.state.food_count}个）")
-        normal_action.setEnabled(self.state.food_count > 0)
-        normal_action.triggered.connect(self._feed_normal)
-
-        premium_action = feed_menu.addAction(f"高级食物（{self.state.premium_food_count}个）")
-        premium_action.setEnabled(self.state.premium_food_count > 0)
-        premium_action.triggered.connect(self._feed_premium)
+        # 喂食
+        feed_action = menu.addAction("喂食")
+        feed_action.triggered.connect(self._open_feed_dialog)
 
         # 学习
         study_action = menu.addAction("学习")
-        can_study, study_msg = GameRules.can_study(self.state)
-        study_action.setEnabled(can_study)
-        if not can_study:
-            study_action.setToolTip(study_msg)
-        study_action.triggered.connect(self._start_study)
+        study_action.triggered.connect(self._open_study_dialog)
 
         # 工作
         work_action = menu.addAction("工作")
-        can_work, work_msg = GameRules.can_work(self.state)
-        work_action.setEnabled(can_work)
-        if not can_work:
-            work_action.setToolTip(work_msg)
         work_action.triggered.connect(self._open_work_dialog)
 
         # 睡觉
-        sleep_menu = menu.addMenu("睡觉")
-        can_sleep, sleep_msg = GameRules.can_sleep(self.state)
-        sleep_menu.setEnabled(can_sleep)
-        if not can_sleep:
-            sleep_menu.setToolTip(sleep_msg)
-        for option in SLEEP_OPTIONS:
-            mins = option["duration"] // 60
-            action = sleep_menu.addAction(f"{mins}分钟（心情 +{option['mood_recovery']}）")
-            action.setEnabled(can_sleep)
-            action.triggered.connect(lambda checked=False, name=option["name"]: self._start_sleep(name))
+        sleep_action = menu.addAction("睡觉")
+        sleep_action.triggered.connect(self._open_sleep_dialog)
 
-        # 使用玩具
-        toy_action = menu.addAction(f"使用玩具（{self.state.toy_count}个）")
-        can_toy, toy_msg = GameRules.can_use_toy(self.state)
-        toy_action.setEnabled(can_toy)
-        if not can_toy:
-            toy_action.setToolTip(toy_msg)
-        toy_action.triggered.connect(self._use_toy)
+        # 玩耍
+        play_action = menu.addAction("玩耍")
+        play_action.triggered.connect(self._open_play_dialog)
 
         if self.state.status in (PetStatus.STUDYING, PetStatus.WORKING, PetStatus.SLEEPING):
             cancel_task_action = menu.addAction("停止当前任务")
@@ -444,15 +418,18 @@ class PetWindow(QMainWindow):
         self._show_tip(msg)
         self.update()
 
-    def _start_study(self):
+    def _start_study(self, option_name: str):
         can, msg = GameRules.can_study(self.state)
         if not can:
             self._show_tip(msg)
             return
-        TaskSystem.start_study(self.state)
+        option = TaskSystem.get_study_option_by_name(option_name)
+        if option is None or not TaskSystem.start_study(self.state, option_name):
+            self._show_tip("学习选项不存在")
+            return
         self._update_frame()
         self.save_manager.save(self.state)
-        self._show_tip("开始学习")
+        self._show_tip(f"开始学习：{option_name}")
         self.update()
 
     def _start_sleep(self, option_name: str):
@@ -478,6 +455,33 @@ class PetWindow(QMainWindow):
             self.save_manager.save(self.state)
         self._show_tip(msg)
         self.update()
+
+    def _open_feed_dialog(self):
+        from .interaction_dialogs import FeedDialog
+        dlg = FeedDialog(self.state, self)
+        if dlg.exec() and dlg.selected_option is not None:
+            if dlg.selected_option:
+                self._feed_premium()
+            else:
+                self._feed_normal()
+
+    def _open_study_dialog(self):
+        from .interaction_dialogs import StudyDialog
+        dlg = StudyDialog(self.state, self)
+        if dlg.exec() and dlg.selected_option:
+            self._start_study(dlg.selected_option)
+
+    def _open_sleep_dialog(self):
+        from .interaction_dialogs import SleepDialog
+        dlg = SleepDialog(self.state, self)
+        if dlg.exec() and dlg.selected_option:
+            self._start_sleep(dlg.selected_option)
+
+    def _open_play_dialog(self):
+        from .interaction_dialogs import PlayDialog
+        dlg = PlayDialog(self.state, self)
+        if dlg.exec() and dlg.selected_option:
+            self._use_toy()
 
     def _open_work_dialog(self):
         from .work_dialog import WorkDialog

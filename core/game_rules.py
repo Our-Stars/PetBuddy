@@ -78,6 +78,10 @@ class GameRules:
     def can_feed(state: GameState) -> tuple[bool, str]:
         if state.status == PetStatus.SLEEPING:
             return False, "正在睡觉，无法喂食"
+        if state.status == PetStatus.STUDYING:
+            return False, "正在学习中，无法喂食"
+        if state.status == PetStatus.WORKING:
+            return False, "正在工作中，无法喂食"
         if state.food_count <= 0 and state.premium_food_count <= 0:
             return False, "没有食物，请先去商店购买"
         return True, ""
@@ -86,6 +90,10 @@ class GameRules:
     def can_use_toy(state: GameState) -> tuple[bool, str]:
         if state.status == PetStatus.SLEEPING:
             return False, "正在睡觉，无法使用玩具"
+        if state.status == PetStatus.STUDYING:
+            return False, "正在学习中，无法使用玩具"
+        if state.status == PetStatus.WORKING:
+            return False, "正在工作中，无法使用玩具"
         if state.toy_count <= 0:
             return False, "没有玩具，请先去商店购买"
         return True, ""

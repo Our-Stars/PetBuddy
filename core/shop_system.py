@@ -9,7 +9,7 @@ SHOP_ITEMS = [
     {"name": "高级食物", "price": 50, "effect": "satiety", "value": 50, "mood_bonus": 5, "type": "premium_food",
      "desc": "饱食度 +50，心情 +5"},
     {"name": "玩具", "price": 20, "effect": "mood", "value": 20, "mood_bonus": 0, "type": "toy",
-     "desc": "心情 +20（购买后存入背包，可随时使用）"},
+     "desc": "心情 +20（购买后存入背包，非任务中可使用）"},
     {"name": "小床升级", "price": 200, "effect": "bed", "value": 1, "mood_bonus": 0, "type": "upgrade",
      "desc": "小床等级 +1"},
 ]
@@ -56,6 +56,11 @@ class ShopSystem:
     @staticmethod
     def use_food(state: GameState, is_premium: bool = False) -> tuple[bool, str]:
         """喂食宠物，返回 (成功, 消息)"""
+        from .game_rules import GameRules
+        can_feed, reason = GameRules.can_feed(state)
+        if not can_feed:
+            return False, reason
+
         if is_premium:
             if state.premium_food_count <= 0:
                 return False, "没有高级食物"
@@ -80,6 +85,11 @@ class ShopSystem:
     @staticmethod
     def use_toy(state: GameState) -> tuple[bool, str]:
         """使用玩具，返回 (成功, 消息)"""
+        from .game_rules import GameRules
+        can_use, reason = GameRules.can_use_toy(state)
+        if not can_use:
+            return False, reason
+
         if state.toy_count <= 0:
             return False, "没有玩具"
         item = ShopSystem.get_item_by_name("玩具")

@@ -3,8 +3,15 @@
 from .game_state import GameState, PetStatus
 
 # 学习配置
-STUDY_DURATION = 300  # 秒
-STUDY_KNOWLEDGE_GAIN = 1
+STUDY_OPTIONS = [
+    {"name": "学习 5分钟", "duration": 300, "knowledge_gain": 1},
+    {"name": "学习 15分钟", "duration": 900, "knowledge_gain": 3.5},
+    {"name": "学习 40分钟", "duration": 2400, "knowledge_gain": 10},
+]
+DEFAULT_STUDY_NAME = STUDY_OPTIONS[0]["name"]
+LEGACY_STUDY_NAME = "学习"
+STUDY_DURATION = STUDY_OPTIONS[0]["duration"]
+STUDY_KNOWLEDGE_GAIN = STUDY_OPTIONS[0]["knowledge_gain"]
 
 # 睡觉配置
 SLEEP_OPTIONS = [
@@ -39,6 +46,15 @@ class TaskSystem:
         return None
 
     @staticmethod
+    def get_study_option_by_name(name: str | None) -> dict | None:
+        if name == LEGACY_STUDY_NAME:
+            return STUDY_OPTIONS[0]
+        for option in STUDY_OPTIONS:
+            if option["name"] == name:
+                return option
+        return None
+
+    @staticmethod
     def get_sleep_option_by_name(name: str | None) -> dict | None:
         if name == LEGACY_SLEEP_NAME:
             return SLEEP_OPTIONS[0]
@@ -48,15 +64,18 @@ class TaskSystem:
         return None
 
     @staticmethod
-    def start_study(state: GameState) -> bool:
+    def start_study(state: GameState, option_name: str = DEFAULT_STUDY_NAME) -> bool:
         """开始学习，返回是否成功"""
         from .game_rules import GameRules
         can_start, _ = GameRules.can_study(state)
         if not can_start:
             return False
+        option = TaskSystem.get_study_option_by_name(option_name)
+        if option is None:
+            return False
         state.status = PetStatus.STUDYING
-        state.current_task = "学习"
-        state.task_remaining_seconds = STUDY_DURATION
+        state.current_task = option["name"]
+        state.task_remaining_seconds = option["duration"]
         return True
 
     @staticmethod
@@ -134,10 +153,11 @@ class TaskSystem:
             result["type"] = "sleep"
             result["message"] = f"睡醒了！心情 +{recovery}"
         elif state.status == PetStatus.STUDYING:
-            gain = STUDY_KNOWLEDGE_GAIN
+            option = TaskSystem.get_study_option_by_name(state.current_task)
+            gain = option["knowledge_gain"] if option else STUDY_KNOWLEDGE_GAIN
             state.knowledge += gain
             result["type"] = "study"
-            result["message"] = f"学习完成！学识 +{gain:.0f}"
+            result["message"] = f"学习完成！学识 +{gain:g}"
         elif state.status == PetStatus.WORKING:
             job = TaskSystem.get_job_by_name(state.current_task)
             if job:
