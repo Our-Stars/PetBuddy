@@ -29,14 +29,10 @@ STATIC_FILES = {
 STATIC_DIR = "Original static image"
 
 
-def _asset_path(*parts: str) -> str:
-    return os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "assets", *parts)
-
-
 class PetWindow(QMainWindow):
     """桌面宠物主窗口"""
 
-    def __init__(self, state: GameState, save_manager: SaveManager):
+    def __init__(self, state: GameState, save_manager: SaveManager, asset_base: str | None = None):
         super().__init__()
         self.state = state
         self.save_manager = save_manager
@@ -45,6 +41,10 @@ class PetWindow(QMainWindow):
         self.press_global_pos = QPoint()
         self._frames: dict[PetStatus, list[QPixmap]] = {}
         self._current_pixmap: QPixmap | None = None
+
+        if asset_base is None:
+            asset_base = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
+        self._asset_base = asset_base
 
         self._init_window()
         self._load_frames()
@@ -69,7 +69,8 @@ class PetWindow(QMainWindow):
 
     def _load_frames(self):
         for status, fname in STATIC_FILES.items():
-            pix = QPixmap(_asset_path(STATIC_DIR, fname))
+            path = os.path.join(self._asset_base, "assets", STATIC_DIR, fname)
+            pix = QPixmap(path)
             if not pix.isNull():
                 self._frames[status] = [pix]
         self._update_frame()

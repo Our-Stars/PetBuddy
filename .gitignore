@@ -35,10 +35,14 @@ ehthumbs.db
 Desktop.ini
 $RECYCLE.BIN/
 
+# 打包产物
+*.dmg
+
 # 本地存档（每台设备独立，不应提交）
 save.json
 save_backup.json
 *.save.json
+saves/
 
 # 环境变量
 .env
