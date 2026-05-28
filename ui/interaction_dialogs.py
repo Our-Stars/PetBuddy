@@ -2,6 +2,7 @@
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QLabel, QPushButton, QHBoxLayout, QFrame,
+    QSizePolicy,
 )
 from PySide6.QtCore import Qt
 
@@ -9,39 +10,7 @@ from core.game_rules import GameRules
 from core.game_state import GameState
 from core.shop_system import ShopSystem
 from core.task_system import STUDY_OPTIONS, SLEEP_OPTIONS
-
-CARD_STYLE = """
-QFrame {
-    background: #f8f8f8;
-    border: 1px solid #d9d9d9;
-    border-radius: 8px;
-    padding: 8px;
-    margin: 4px;
-}
-QLabel {
-    color: #222222;
-    background: transparent;
-}
-"""
-
-DIALOG_STYLE = """
-QDialog, QWidget {
-    background: #303030;
-    color: #ffffff;
-}
-QLabel {
-    color: #ffffff;
-}
-QPushButton {
-    min-height: 28px;
-    padding: 4px 12px;
-}
-QPushButton:disabled {
-    color: #777777;
-    background: #eeeeee;
-    border: 1px solid #cccccc;
-}
-"""
+from .dialog_styles import DIALOG_STYLE
 
 
 class OptionDialog(QDialog):
@@ -55,17 +24,22 @@ class OptionDialog(QDialog):
         self.setStyleSheet(DIALOG_STYLE)
 
     def _create_layout(self) -> QVBoxLayout:
-        return QVBoxLayout(self)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(18, 18, 18, 18)
+        layout.setSpacing(12)
+        return layout
 
     def _add_summary(self, layout: QVBoxLayout, text: str):
         label = QLabel(text)
-        label.setStyleSheet("font-size: 16px; font-weight: bold; margin: 8px;")
+        label.setObjectName("summaryLabel")
+        label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         layout.addWidget(label)
 
     def _add_empty_message(self, layout: QVBoxLayout, text: str):
         label = QLabel(text)
-        label.setStyleSheet("font-size: 14px; margin: 12px;")
+        label.setObjectName("emptyLabel")
         label.setAlignment(Qt.AlignCenter)
+        label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         layout.addWidget(label)
 
     def _add_card(
@@ -78,16 +52,28 @@ class OptionDialog(QDialog):
         value,
     ):
         card = QFrame()
-        card.setFrameStyle(QFrame.StyledPanel)
-        card.setStyleSheet(CARD_STYLE)
+        card.setObjectName("optionCard")
+        card.setEnabled(enabled)
+        card.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
         row = QHBoxLayout(card)
-        info = QLabel(f"{title}\n{detail}")
-        info.setStyleSheet("font-size: 13px; color: #222222;")
-        row.addWidget(info)
+        row.setContentsMargins(14, 12, 14, 12)
+        row.setSpacing(16)
+
+        info_layout = QVBoxLayout()
+        info_layout.setSpacing(5)
+        lbl_title = QLabel(title)
+        lbl_title.setObjectName("cardTitle")
+        lbl_detail = QLabel(detail)
+        lbl_detail.setObjectName("cardDetail")
+        lbl_detail.setWordWrap(True)
+        info_layout.addWidget(lbl_title)
+        info_layout.addWidget(lbl_detail)
+        row.addLayout(info_layout, 1)
         row.addStretch()
 
         button = QPushButton(button_text)
+        button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         button.setEnabled(enabled)
         if enabled:
             button.clicked.connect(lambda checked=False, v=value: self._select(v))
@@ -97,7 +83,10 @@ class OptionDialog(QDialog):
 
     def _add_cancel(self, layout: QVBoxLayout):
         btn_close = QPushButton("取消")
+        btn_close.setObjectName("secondaryButton")
+        btn_close.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         btn_close.clicked.connect(self.reject)
+        layout.addStretch()
         layout.addWidget(btn_close)
 
     def _select(self, value):

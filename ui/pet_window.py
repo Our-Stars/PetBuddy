@@ -15,6 +15,7 @@ from core.game_rules import GameRules
 from core.task_system import TaskSystem
 from core.shop_system import ShopSystem
 from storage.save_manager import SaveManager
+from .dialog_styles import CONTEXT_MENU_STYLE
 
 STATIC_FILES = {
     PetStatus.IDLE: "pet_idle.png",
@@ -363,7 +364,7 @@ class PetWindow(QMainWindow):
     def contextMenuEvent(self, event):
         """右键菜单"""
         menu = QMenu(self)
-        menu.setStyleSheet("QMenu { font-size: 14px; padding: 4px; }")
+        menu.setStyleSheet(CONTEXT_MENU_STYLE)
 
         # 喂食
         feed_action = menu.addAction("喂食")

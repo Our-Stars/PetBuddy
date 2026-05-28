@@ -2,44 +2,12 @@
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QLabel, QPushButton, QHBoxLayout, QFrame, QScrollArea, QWidget,
-    QTabWidget,
+    QTabWidget, QSizePolicy,
 )
 from PySide6.QtCore import Qt
 from core.game_state import GameState
 from core.shop_system import ShopSystem
-
-CARD_STYLE = """
-QFrame {
-    background: #f8f8f8;
-    border: 1px solid #d9d9d9;
-    border-radius: 8px;
-    padding: 8px;
-    margin: 4px;
-}
-QLabel {
-    color: #222222;
-    background: transparent;
-}
-"""
-
-DIALOG_STYLE = """
-QDialog, QScrollArea, QWidget {
-    background: #303030;
-    color: #ffffff;
-}
-QLabel {
-    color: #ffffff;
-}
-QPushButton {
-    min-height: 28px;
-    padding: 4px 12px;
-}
-QPushButton:disabled {
-    color: #777777;
-    background: #eeeeee;
-    border: 1px solid #cccccc;
-}
-"""
+from .dialog_styles import DIALOG_STYLE
 
 
 class ShopDialog(QDialog):
@@ -55,9 +23,12 @@ class ShopDialog(QDialog):
 
     def _init_ui(self):
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(18, 18, 18, 18)
+        layout.setSpacing(12)
 
         self.lbl_coins = QLabel()
-        self.lbl_coins.setStyleSheet("font-size: 16px; font-weight: bold; margin: 8px;")
+        self.lbl_coins.setObjectName("summaryLabel")
+        self.lbl_coins.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         layout.addWidget(self.lbl_coins)
 
         tabs = QTabWidget()
@@ -66,6 +37,8 @@ class ShopDialog(QDialog):
         layout.addWidget(tabs)
 
         btn_close = QPushButton("关闭")
+        btn_close.setObjectName("secondaryButton")
+        btn_close.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         btn_close.clicked.connect(self.accept)
         layout.addWidget(btn_close)
 
@@ -77,28 +50,45 @@ class ShopDialog(QDialog):
         scroll.setFrameShape(QFrame.NoFrame)
         container = QWidget()
         container_layout = QVBoxLayout(container)
+        container_layout.setContentsMargins(10, 12, 10, 10)
+        container_layout.setSpacing(12)
 
         for item in ShopSystem.get_items_by_type(item_type):
             container_layout.addWidget(self._create_item_card(item))
+        container_layout.addStretch()
 
         scroll.setWidget(container)
         return scroll
 
     def _create_item_card(self, item: dict) -> QFrame:
         card = QFrame()
-        card.setFrameStyle(QFrame.StyledPanel)
-        card.setStyleSheet(CARD_STYLE)
+        card.setObjectName("optionCard")
+        card.setMinimumHeight(118)
+        card.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
 
         row = QHBoxLayout(card)
+        row.setContentsMargins(14, 12, 14, 12)
+        row.setSpacing(16)
 
         desc = item.get("desc", "")
-        info = QLabel(f"{item['name']}\n价格：{item['price']} 金币\n{desc}")
-        info.setStyleSheet("font-size: 14px; color: #222222;")
-        row.addWidget(info)
+        info_layout = QVBoxLayout()
+        info_layout.setSpacing(5)
+        title = QLabel(item["name"])
+        title.setObjectName("cardTitle")
+        title.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        detail = QLabel(f"价格：{item['price']} 金币\n{desc}")
+        detail.setObjectName("cardDetail")
+        detail.setWordWrap(True)
+        detail.setMinimumHeight(52)
+        detail.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
+        info_layout.addWidget(title)
+        info_layout.addWidget(detail)
+        row.addLayout(info_layout, 1)
 
         row.addStretch()
 
         btn = QPushButton(f"购买（{item['price']}G）")
+        btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         btn.clicked.connect(lambda checked=False, i=item: self._buy(i))
         row.addWidget(btn)
 

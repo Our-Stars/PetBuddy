@@ -2,11 +2,12 @@
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QFormLayout, QCheckBox, QComboBox, QPushButton,
-    QHBoxLayout, QMessageBox, QGroupBox,
+    QHBoxLayout, QMessageBox, QGroupBox, QSizePolicy,
 )
 from PySide6.QtCore import Qt
 from core.game_state import GameState, PetSize
 from storage.save_manager import SaveManager
+from .dialog_styles import DIALOG_STYLE
 
 
 class SettingsDialog(QDialog):
@@ -15,16 +16,23 @@ class SettingsDialog(QDialog):
         self.state = state
         self.save_manager = save_manager
         self.setWindowTitle("设置")
-        self.setMinimumWidth(300)
+        self.setMinimumWidth(360)
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
+        self.setStyleSheet(DIALOG_STYLE)
         self._init_ui()
 
     def _init_ui(self):
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(18, 18, 18, 18)
+        layout.setSpacing(12)
 
         # 显示设置
         display_group = QGroupBox("显示设置")
         display_form = QFormLayout()
+        display_form.setContentsMargins(6, 8, 6, 6)
+        display_form.setHorizontalSpacing(16)
+        display_form.setVerticalSpacing(12)
+        display_form.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
 
         self.chk_top = QCheckBox("始终置顶")
         self.chk_top.setChecked(self.state.always_on_top)
@@ -38,6 +46,7 @@ class SettingsDialog(QDialog):
 
         self.cmb_size = QComboBox()
         self.cmb_size.addItems(["小", "中", "大"])
+        self.cmb_size.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         size_map = {PetSize.SMALL: 0, PetSize.MEDIUM: 1, PetSize.LARGE: 2}
         self.cmb_size.setCurrentIndex(size_map.get(self.state.pet_size, 1))
         self.cmb_size.currentIndexChanged.connect(self._on_size_changed)
@@ -49,9 +58,11 @@ class SettingsDialog(QDialog):
         # 存档设置
         save_group = QGroupBox("存档设置")
         save_layout = QHBoxLayout()
+        save_layout.setContentsMargins(6, 8, 6, 6)
 
         btn_reset = QPushButton("重置存档")
-        btn_reset.setStyleSheet("QPushButton { color: red; }")
+        btn_reset.setObjectName("dangerButton")
+        btn_reset.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         btn_reset.clicked.connect(self._reset_save)
         save_layout.addWidget(btn_reset)
 

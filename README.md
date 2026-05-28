@@ -17,6 +17,8 @@ The app is fully local. It does not use accounts, online services, or a database
 - Click interaction with mood gain
 - Context menu for feeding, studying, working, sleeping, playing, shop, status, and settings
 - Feeding, studying, working, sleeping, and playing all open a choice dialog before execution
+- Unified light theme for choice dialogs, shop, status, settings, and the context menu
+- Live status panel refresh for task remaining time and active buff timers
 - Feeding, playing, and click interactions are unavailable while studying, working, or sleeping
 - Study tasks: 5 / 15 / 40 minutes for 1 / 3.5 / 10 knowledge
 - Work tasks unlocked by knowledge level
@@ -104,6 +106,12 @@ The shop is split into Food and Toys pages.
 ## Save Data
 
 During development runs, save files are stored in the `saves/` directory under the project root. The app keeps `save.json` and `save_backup.json`, and writes saves through a temporary file followed by atomic replacement.
+
+## UI Notes
+
+PetBuddy uses static pet images from `assets/Original static image/` for each pet state. The main window draws overlays such as status text and task progress with `QPainter`.
+
+Most modal UI uses the shared light theme in `ui/dialog_styles.py`, including choice dialogs, the shop, status, settings, and the right-click context menu. The status panel keeps refreshing while it is open, so remaining task time and buff timers stay current.
 
 ## Packaging
 

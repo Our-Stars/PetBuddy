@@ -1,11 +1,12 @@
 """状态面板对话框"""
 
 from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QLabel, QGroupBox, QFormLayout,
+    QDialog, QVBoxLayout, QLabel, QGroupBox, QFormLayout, QSizePolicy,
 )
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from core.game_state import GameState, PetStatus
 from core.shop_system import ShopSystem
+from .dialog_styles import DIALOG_STYLE
 
 STATUS_LABELS = {
     PetStatus.IDLE: "空闲",
@@ -23,16 +24,27 @@ class StatusPanel(QDialog):
         self.state = state
         self.save_manager = save_manager
         self.setWindowTitle("宠物状态")
-        self.setMinimumWidth(280)
+        self.setMinimumWidth(360)
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
+        self.setStyleSheet(DIALOG_STYLE)
         self._init_ui()
+        self.refresh_timer = QTimer(self)
+        self.refresh_timer.setInterval(1000)
+        self.refresh_timer.timeout.connect(self._refresh)
+        self.refresh_timer.start()
         self._refresh()
 
     def _init_ui(self):
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(18, 18, 18, 18)
+        layout.setSpacing(12)
 
         group = QGroupBox("核心状态")
         form = QFormLayout()
+        form.setContentsMargins(6, 8, 6, 6)
+        form.setHorizontalSpacing(16)
+        form.setVerticalSpacing(10)
+        form.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
         self.lbl_coins = QLabel()
         self.lbl_mood = QLabel()
         self.lbl_satiety = QLabel()
@@ -43,6 +55,16 @@ class StatusPanel(QDialog):
         self.lbl_satiety_buff = QLabel()
         self.lbl_mood_buff = QLabel()
         self.lbl_inventory.setWordWrap(True)
+        self.lbl_task.setWordWrap(True)
+        self.lbl_satiety_buff.setWordWrap(True)
+        self.lbl_mood_buff.setWordWrap(True)
+        for label in (
+            self.lbl_coins, self.lbl_mood, self.lbl_satiety, self.lbl_knowledge,
+            self.lbl_status, self.lbl_task, self.lbl_inventory,
+            self.lbl_satiety_buff, self.lbl_mood_buff,
+        ):
+            label.setObjectName("fieldValue")
+            label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
 
         form.addRow("金币：", self.lbl_coins)
         form.addRow("心情：", self.lbl_mood)
