@@ -22,7 +22,7 @@ SLEEP_OPTIONS = [
 DEFAULT_SLEEP_NAME = SLEEP_OPTIONS[0]["name"]
 LEGACY_SLEEP_NAME = "睡觉"
 
-# 工作列表（每个工种包含多个时长档位，长档位时薪略高）
+# 工作列表（每个工种包含多个时长档位，长档位时薪略高；学识 > 500 后启动工作收益加成）
 JOBS = [
     {
         "name": "捡瓶子",
@@ -34,46 +34,68 @@ JOBS = [
     },
     {
         "name": "发传单",
-        "knowledge": 10,
+        "knowledge": 20,
         "options": [
             {"label": "发传单 5分钟", "duration": 300, "reward": 40},
-            {"label": "发传单 15分钟", "duration": 900, "reward": 130},
-            {"label": "发传单 30分钟", "duration": 1800, "reward": 275},
+            {"label": "发传单 15分钟", "duration": 900, "reward": 128},
+            {"label": "发传单 30分钟", "duration": 1800, "reward": 270},
         ],
     },
     {
-        "name": "咖啡店帮工",
-        "knowledge": 30,
+        "name": "外卖骑手",
+        "knowledge": 100,
         "options": [
-            {"label": "咖啡店帮工 10分钟", "duration": 600, "reward": 100},
-            {"label": "咖啡店帮工 30分钟", "duration": 1800, "reward": 330},
+            {"label": "外卖骑手 10分钟", "duration": 600, "reward": 95},
+            {"label": "外卖骑手 30分钟", "duration": 1800, "reward": 300},
+        ],
+    },
+    {
+        "name": "咖啡师",
+        "knowledge": 200,
+        "options": [
+            {"label": "咖啡师 10分钟", "duration": 600, "reward": 105},
+            {"label": "咖啡师 30分钟", "duration": 1800, "reward": 330},
+            {"label": "咖啡师 60分钟", "duration": 3600, "reward": 690},
+        ],
+    },
+    {
+        "name": "宠物主播",
+        "knowledge": 300,
+        "options": [
+            {"label": "宠物主播 15分钟", "duration": 900, "reward": 180},
+            {"label": "宠物主播 30分钟", "duration": 1800, "reward": 375},
+            {"label": "宠物主播 60分钟", "duration": 3600, "reward": 780},
         ],
     },
     {
         "name": "程序员宠物",
-        "knowledge": 60,
+        "knowledge": 400,
         "options": [
-            {"label": "程序员宠物 15分钟", "duration": 900, "reward": 180},
-            {"label": "程序员宠物 30分钟", "duration": 1800, "reward": 380},
-            {"label": "程序员宠物 60分钟", "duration": 3600, "reward": 800},
+            {"label": "程序员宠物 15分钟", "duration": 900, "reward": 203},
+            {"label": "程序员宠物 30分钟", "duration": 1800, "reward": 420},
+            {"label": "程序员宠物 60分钟", "duration": 3600, "reward": 900},
         ],
     },
     {
         "name": "神秘顾问",
-        "knowledge": 120,
+        "knowledge": 500,
         "options": [
-            {"label": "神秘顾问 20分钟", "duration": 1200, "reward": 270},
-            {"label": "神秘顾问 40分钟", "duration": 2400, "reward": 570},
-            {"label": "神秘顾问 60分钟", "duration": 3600, "reward": 900},
+            {"label": "神秘顾问 20分钟", "duration": 1200, "reward": 310},
+            {"label": "神秘顾问 40分钟", "duration": 2400, "reward": 640},
+            {"label": "神秘顾问 60分钟", "duration": 3600, "reward": 1000},
         ],
     },
 ]
+
+MAX_JOB_KNOWLEDGE = 500
 
 # 旧存档兼容：旧版 task name → 新版默认档位
 LEGACY_JOB_NAME_MAP = {
     "捡瓶子": "捡瓶子 5分钟",
     "发传单": "发传单 5分钟",
-    "咖啡店帮工": "咖啡店帮工 10分钟",
+    "咖啡店帮工": "咖啡师 10分钟",
+    "咖啡店帮工 10分钟": "咖啡师 10分钟",
+    "咖啡店帮工 30分钟": "咖啡师 30分钟",
     "程序员宠物": "程序员宠物 15分钟",
     "神秘顾问": "神秘顾问 20分钟",
 }
@@ -173,6 +195,14 @@ class TaskSystem:
         return True
 
     @staticmethod
+    def get_work_reward_multiplier(knowledge: float) -> float:
+        """学识超过 MAX_JOB_KNOWLEDGE 后启动工作收益加成：每点 +0.2%，上限 +100%。"""
+        if knowledge <= MAX_JOB_KNOWLEDGE:
+            return 1.0
+        bonus = (knowledge - MAX_JOB_KNOWLEDGE) * 0.002
+        return 1.0 + min(bonus, 1.0)
+
+    @staticmethod
     def cancel_current_task(state: GameState) -> tuple[bool, str]:
         """取消当前任务（学习/工作/睡觉），不结算奖励。"""
         if state.status not in (PetStatus.STUDYING, PetStatus.WORKING, PetStatus.SLEEPING) or state.current_task is None:
@@ -224,9 +254,16 @@ class TaskSystem:
             option = TaskSystem.get_job_option_by_name(state.current_task)
             if option:
                 reward = option["reward"]
+                multiplier = TaskSystem.get_work_reward_multiplier(state.knowledge)
+                if multiplier > 1.0:
+                    reward = int(reward * multiplier)
                 state.coins += reward
                 result["type"] = "work"
-                result["message"] = f"工作完成：{state.current_task}！获得 {reward} 金币"
+                if multiplier > 1.0:
+                    bonus_pct = int((multiplier - 1.0) * 100)
+                    result["message"] = f"工作完成：{state.current_task}！获得 {reward} 金币（学识加成 +{bonus_pct}%）"
+                else:
+                    result["message"] = f"工作完成：{state.current_task}！获得 {reward} 金币"
 
         # 恢复状态
         state.current_task = None

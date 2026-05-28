@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt
 from core.game_rules import GameRules
 from core.game_state import GameState
-from core.task_system import JOBS
+from core.task_system import JOBS, MAX_JOB_KNOWLEDGE, TaskSystem
 from .dialog_styles import DIALOG_STYLE
 
 
@@ -70,8 +70,7 @@ class WorkDialog(QDialog):
         card.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
         unlocked = self.state.knowledge >= job["knowledge"]
-        enabled = can_work and unlocked
-        card.setEnabled(enabled)
+        can_start = can_work and unlocked
 
         vbox = QVBoxLayout(card)
         vbox.setContentsMargins(14, 12, 14, 12)
@@ -83,7 +82,10 @@ class WorkDialog(QDialog):
         title.setObjectName("cardTitle")
         header.addWidget(title)
         header.addStretch()
-        req = QLabel(f"学识 {job['knowledge']}")
+        req_label = "学识 %d" % job["knowledge"]
+        if not unlocked:
+            req_label = "学识 %d（未达到）" % job["knowledge"]
+        req = QLabel(req_label)
         req.setObjectName("cardDetail")
         header.addWidget(req)
         vbox.addLayout(header)
@@ -101,8 +103,7 @@ class WorkDialog(QDialog):
         combo.setMinimumWidth(120)
         for opt in job["options"]:
             mins = opt["duration"] // 60
-            combo.addItem(f"{mins}分钟", opt)
-        combo.setEnabled(enabled)
+            combo.addItem("%d分钟" % mins, opt)
         controls.addWidget(combo)
 
         lbl_reward = QLabel()
@@ -120,16 +121,22 @@ class WorkDialog(QDialog):
             btn_text = "开始工作"
         btn = QPushButton(btn_text)
         btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        btn.setEnabled(enabled)
+        btn.setEnabled(can_start)
         controls.addWidget(btn)
 
         vbox.addLayout(controls)
 
-        # 联动：下拉框切换时更新收益显示
+        # 联动：下拉框切换时更新收益显示（含学识加成）
         def _update_reward():
             opt = combo.currentData()
             if opt:
-                lbl_reward.setText(f"收益：{opt['reward']}G")
+                multiplier = TaskSystem.get_work_reward_multiplier(self.state.knowledge)
+                if multiplier > 1.0:
+                    reward = int(opt["reward"] * multiplier)
+                    bonus_pct = int((multiplier - 1.0) * 100)
+                    lbl_reward.setText("收益：%dG (+%d%%)" % (reward, bonus_pct))
+                else:
+                    lbl_reward.setText("收益：%dG" % opt["reward"])
             else:
                 lbl_reward.setText("收益：--")
 

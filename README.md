@@ -78,15 +78,19 @@ On first launch without an existing save, the pet starts with 0 coins, 0 knowled
 
 ## Jobs
 
-Each job offers multiple duration options. Longer durations have slightly higher hourly rates.
+Each job offers multiple duration options. Longer durations have slightly higher hourly rates. You can browse all job options and rewards even before unlocking them.
 
 | Job | Required Knowledge | Duration | Coins | Rate (G/min) |
 | --- | ---: | ---: | ---: | ---: |
-| Bottle Collector | 0 | 5 / 15 min | 20 / 65 | 4.0 / 4.3 |
-| Flyer Distributor | 10 | 5 / 15 / 30 min | 40 / 130 / 275 | 8.0 / 8.7 / 9.2 |
-| Cafe Helper | 30 | 10 / 30 min | 100 / 330 | 10.0 / 11.0 |
-| Pet Programmer | 60 | 15 / 30 / 60 min | 180 / 380 / 800 | 12.0 / 12.7 / 13.3 |
-| Mystery Consultant | 120 | 20 / 40 / 60 min | 270 / 570 / 900 | 13.5 / 14.3 / 15.0 |
+| Bottle Collector | 0 | 5 / 15 min | 20 / 65 | 4.00 / 4.33 |
+| Flyer Distributor | 20 | 5 / 15 / 30 min | 40 / 128 / 270 | 8.00 / 8.53 / 9.00 |
+| Delivery Rider | 100 | 10 / 30 min | 95 / 300 | 9.50 / 10.00 |
+| Barista | 200 | 10 / 30 / 60 min | 105 / 330 / 690 | 10.50 / 11.00 / 11.50 |
+| Pet Streamer | 300 | 15 / 30 / 60 min | 180 / 375 / 780 | 12.00 / 12.50 / 13.00 |
+| Pet Programmer | 400 | 15 / 30 / 60 min | 203 / 420 / 900 | 13.53 / 14.00 / 15.00 |
+| Mystery Consultant | 500 | 20 / 40 / 60 min | 310 / 640 / 1000 | 15.50 / 16.00 / 16.67 |
+
+Once knowledge exceeds 500 (the highest job requirement), each extra point grants +0.2% work coin bonus, capped at +100% (knowledge 1000). Old saves with "Cafe Helper" are automatically mapped to "Barista".
 
 ## Shop
 
