@@ -87,7 +87,7 @@ class ShopDialog(QDialog):
 
         row.addStretch()
 
-        btn = QPushButton(f"购买（{item['price']}G）")
+        btn = QPushButton(f"购买（{item['price']}金币）")
         btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         btn.clicked.connect(lambda checked=False, i=item: self._buy(i))
         row.addWidget(btn)
@@ -106,4 +106,4 @@ class ShopDialog(QDialog):
         QTimer.singleShot(2000, lambda: self.setWindowTitle("商店"))
 
     def _refresh(self):
-        self.lbl_coins.setText(f"金币：{self.state.coins} G")
+        self.lbl_coins.setText(f"金币：{self.state.coins}")

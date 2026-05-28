@@ -17,7 +17,7 @@ class WorkDialog(QDialog):
         self.state = state
         self.selected_job = None
         self.setWindowTitle("选择工作")
-        self.setMinimumWidth(400)
+        self.setMinimumWidth(480)
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
         self.setStyleSheet(DIALOG_STYLE)
         self._init_ui()
@@ -108,7 +108,7 @@ class WorkDialog(QDialog):
 
         lbl_reward = QLabel()
         lbl_reward.setObjectName("cardDetail")
-        lbl_reward.setMinimumWidth(80)
+        lbl_reward.setMinimumWidth(150)
         controls.addWidget(lbl_reward)
 
         controls.addStretch()
@@ -134,9 +134,9 @@ class WorkDialog(QDialog):
                 if multiplier > 1.0:
                     reward = int(opt["reward"] * multiplier)
                     bonus_pct = int((multiplier - 1.0) * 100)
-                    lbl_reward.setText("收益：%dG (+%d%%)" % (reward, bonus_pct))
+                    lbl_reward.setText("收益：%d金币 (+%d%%)" % (reward, bonus_pct))
                 else:
-                    lbl_reward.setText("收益：%dG" % opt["reward"])
+                    lbl_reward.setText("收益：%d金币" % opt["reward"])
             else:
                 lbl_reward.setText("收益：--")
 
