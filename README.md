@@ -63,6 +63,10 @@ python main.py
 | Sleep | 5 / 15 / 40 minutes, mood +5 / +18 / +50 |
 | Buffs | Higher-tier food can slow satiety decay, and higher-tier toys can slow mood decay; buff duration is fixed by item |
 
+### Initial State
+
+On first launch without an existing save, the pet starts with 0 coins, 0 knowledge, 100 mood, and 100 satiety. Existing saves keep their stored values.
+
 ### Mood Multiplier
 
 | Mood | Multiplier |

@@ -22,8 +22,8 @@ class PetSize(Enum):
 @dataclass
 class GameState:
     coins: int = 0
-    mood: float = 80
-    satiety: float = 80
+    mood: float = 100
+    satiety: float = 100
     knowledge: float = 0.0
     status: PetStatus = PetStatus.IDLE
     inventory: dict[str, int] = field(default_factory=dict)

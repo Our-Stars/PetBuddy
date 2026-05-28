@@ -90,8 +90,8 @@ def dict_to_game_state(data: dict) -> GameState:
 
     state = GameState(
         coins=data.get("coins", 0),
-        mood=data.get("mood", 80),
-        satiety=data.get("satiety", 80),
+        mood=data.get("mood", 100),
+        satiety=data.get("satiety", 100),
         knowledge=float(data.get("knowledge", 0)),
         status=status,
         inventory=_inventory_from_data(data),
