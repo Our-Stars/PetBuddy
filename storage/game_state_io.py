@@ -3,19 +3,62 @@
 from core.game_state import GameState, PetStatus, PetSize
 
 
+def _inventory_from_data(data: dict) -> dict[str, int]:
+    inventory = {}
+    raw_inventory = data.get("inventory")
+    if isinstance(raw_inventory, dict):
+        for item_id, count in raw_inventory.items():
+            try:
+                count_int = int(count)
+            except (TypeError, ValueError):
+                continue
+            if count_int > 0:
+                inventory[str(item_id)] = count_int
+
+    legacy_map = {
+        "food_count": "bread",
+        "premium_food_count": "cat_meal",
+        "toy_count": "teaser_wand",
+    }
+    for old_key, item_id in legacy_map.items():
+        try:
+            count = int(data.get(old_key, 0))
+        except (TypeError, ValueError):
+            count = 0
+        if count > 0:
+            inventory[item_id] = inventory.get(item_id, 0) + count
+
+    return inventory
+
+
+def _to_int(value, default: int = 0) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _to_float(value, default: float = 0.0) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
 def game_state_to_dict(state: GameState) -> dict:
     """将 GameState 序列化为 dict"""
     return {
-        "version": 1,
+        "version": 2,
         "coins": state.coins,
         "mood": state.mood,
         "satiety": state.satiety,
         "knowledge": state.knowledge,
         "status": state.status.value,
-        "food_count": state.food_count,
-        "premium_food_count": state.premium_food_count,
-        "toy_count": state.toy_count,
-        "bed_level": state.bed_level,
+        "inventory": state.inventory,
+        "satiety_decay_buff_remaining_seconds": state.satiety_decay_buff_remaining_seconds,
+        "satiety_decay_buff_rate": state.satiety_decay_buff_rate,
+        "mood_decay_buff_remaining_seconds": state.mood_decay_buff_remaining_seconds,
+        "mood_decay_buff_rate": state.mood_decay_buff_rate,
         "current_task": state.current_task,
         "task_remaining_seconds": state.task_remaining_seconds,
         "position_x": state.position_x,
@@ -51,10 +94,11 @@ def dict_to_game_state(data: dict) -> GameState:
         satiety=data.get("satiety", 80),
         knowledge=float(data.get("knowledge", 0)),
         status=status,
-        food_count=data.get("food_count", 0),
-        premium_food_count=data.get("premium_food_count", 0),
-        toy_count=data.get("toy_count", 0),
-        bed_level=data.get("bed_level", 0),
+        inventory=_inventory_from_data(data),
+        satiety_decay_buff_remaining_seconds=_to_int(data.get("satiety_decay_buff_remaining_seconds", 0)),
+        satiety_decay_buff_rate=_to_float(data.get("satiety_decay_buff_rate", 0.0)),
+        mood_decay_buff_remaining_seconds=_to_int(data.get("mood_decay_buff_remaining_seconds", 0)),
+        mood_decay_buff_rate=_to_float(data.get("mood_decay_buff_rate", 0.0)),
         current_task=data.get("current_task"),
         task_remaining_seconds=data.get("task_remaining_seconds", 0),
         position_x=data.get("position_x", 1200),

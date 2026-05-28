@@ -5,6 +5,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt
 from core.game_state import GameState, PetStatus
+from core.shop_system import ShopSystem
 
 STATUS_LABELS = {
     PetStatus.IDLE: "空闲",
@@ -38,10 +39,10 @@ class StatusPanel(QDialog):
         self.lbl_knowledge = QLabel()
         self.lbl_status = QLabel()
         self.lbl_task = QLabel()
-        self.lbl_food = QLabel()
-        self.lbl_premium = QLabel()
-        self.lbl_toy = QLabel()
-        self.lbl_bed = QLabel()
+        self.lbl_inventory = QLabel()
+        self.lbl_satiety_buff = QLabel()
+        self.lbl_mood_buff = QLabel()
+        self.lbl_inventory.setWordWrap(True)
 
         form.addRow("金币：", self.lbl_coins)
         form.addRow("心情：", self.lbl_mood)
@@ -49,10 +50,9 @@ class StatusPanel(QDialog):
         form.addRow("学识：", self.lbl_knowledge)
         form.addRow("状态：", self.lbl_status)
         form.addRow("当前任务：", self.lbl_task)
-        form.addRow("普通食物：", self.lbl_food)
-        form.addRow("高级食物：", self.lbl_premium)
-        form.addRow("玩具：", self.lbl_toy)
-        form.addRow("小床等级：", self.lbl_bed)
+        form.addRow("库存：", self.lbl_inventory)
+        form.addRow("饱食Buff：", self.lbl_satiety_buff)
+        form.addRow("心情Buff：", self.lbl_mood_buff)
         group.setLayout(form)
         layout.addWidget(group)
 
@@ -71,7 +71,13 @@ class StatusPanel(QDialog):
         else:
             self.lbl_task.setText("无")
 
-        self.lbl_food.setText(str(s.food_count))
-        self.lbl_premium.setText(str(s.premium_food_count))
-        self.lbl_toy.setText(str(s.toy_count))
-        self.lbl_bed.setText(str(s.bed_level))
+        self.lbl_inventory.setText(ShopSystem.inventory_summary(s))
+        self.lbl_satiety_buff.setText(self._format_buff(s.satiety_decay_buff_remaining_seconds, s.satiety_decay_buff_rate))
+        self.lbl_mood_buff.setText(self._format_buff(s.mood_decay_buff_remaining_seconds, s.mood_decay_buff_rate))
+
+    def _format_buff(self, remaining_seconds: int, rate: float) -> str:
+        if remaining_seconds <= 0 or rate <= 0:
+            return "无"
+        mins = remaining_seconds // 60
+        secs = remaining_seconds % 60
+        return f"剩余 {mins}分{secs:02d}秒，下降速度 -{int(rate * 100)}%"

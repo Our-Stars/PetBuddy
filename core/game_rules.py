@@ -82,7 +82,8 @@ class GameRules:
             return False, "正在学习中，无法喂食"
         if state.status == PetStatus.WORKING:
             return False, "正在工作中，无法喂食"
-        if state.food_count <= 0 and state.premium_food_count <= 0:
+        from .shop_system import ShopSystem
+        if not ShopSystem.has_item_type(state, "food"):
             return False, "没有食物，请先去商店购买"
         return True, ""
 
@@ -94,7 +95,8 @@ class GameRules:
             return False, "正在学习中，无法使用玩具"
         if state.status == PetStatus.WORKING:
             return False, "正在工作中，无法使用玩具"
-        if state.toy_count <= 0:
+        from .shop_system import ShopSystem
+        if not ShopSystem.has_item_type(state, "toy"):
             return False, "没有玩具，请先去商店购买"
         return True, ""
 

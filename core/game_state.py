@@ -26,10 +26,11 @@ class GameState:
     satiety: float = 80
     knowledge: float = 0.0
     status: PetStatus = PetStatus.IDLE
-    food_count: int = 0
-    premium_food_count: int = 0
-    toy_count: int = 0
-    bed_level: int = 0
+    inventory: dict[str, int] = field(default_factory=dict)
+    satiety_decay_buff_remaining_seconds: int = 0
+    satiety_decay_buff_rate: float = 0.0
+    mood_decay_buff_remaining_seconds: int = 0
+    mood_decay_buff_rate: float = 0.0
     current_task: str | None = None
     task_remaining_seconds: int = 0
     position_x: int = 1200
@@ -61,3 +62,7 @@ class GameState:
         """将心情和饱食度限制在 0-100 范围内"""
         self.mood = max(0, min(100, self.mood))
         self.satiety = max(0, min(100, self.satiety))
+        self.satiety_decay_buff_remaining_seconds = max(0, self.satiety_decay_buff_remaining_seconds)
+        self.satiety_decay_buff_rate = max(0.0, min(0.95, self.satiety_decay_buff_rate))
+        self.mood_decay_buff_remaining_seconds = max(0, self.mood_decay_buff_remaining_seconds)
+        self.mood_decay_buff_rate = max(0.0, min(0.95, self.mood_decay_buff_rate))

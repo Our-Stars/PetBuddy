@@ -7,6 +7,7 @@ from PySide6.QtCore import Qt
 
 from core.game_rules import GameRules
 from core.game_state import GameState
+from core.shop_system import ShopSystem
 from core.task_system import STUDY_OPTIONS, SLEEP_OPTIONS
 
 CARD_STYLE = """
@@ -61,6 +62,12 @@ class OptionDialog(QDialog):
         label.setStyleSheet("font-size: 16px; font-weight: bold; margin: 8px;")
         layout.addWidget(label)
 
+    def _add_empty_message(self, layout: QVBoxLayout, text: str):
+        label = QLabel(text)
+        label.setStyleSheet("font-size: 14px; margin: 12px;")
+        label.setAlignment(Qt.AlignCenter)
+        layout.addWidget(label)
+
     def _add_card(
         self,
         layout: QVBoxLayout,
@@ -110,17 +117,23 @@ class FeedDialog(OptionDialog):
         can_feed, reason = GameRules.can_feed(self.state)
         if reason.startswith("没有食物"):
             reason = ""
-        food_options = [
-            ("普通食物", self.state.food_count, "饱食 +20", False),
-            ("高级食物", self.state.premium_food_count, "饱食 +50，心情 +5", True),
+        food_items = [
+            item for item in ShopSystem.get_items_by_type("food")
+            if ShopSystem.get_inventory_count(self.state, item["id"]) > 0
         ]
-        for name, count, effect, is_premium in food_options:
-            enabled = can_feed and count > 0
-            button_text = "喂食" if enabled else ("无法喂食" if reason else "无库存")
-            detail = f"剩余：{count} | 效果：{effect}"
+        if not food_items:
+            self._add_empty_message(layout, "没有食物了")
+            self._add_cancel(layout)
+            return
+
+        for item in food_items:
+            enabled = can_feed
+            button_text = "喂食" if enabled else "无法喂食"
+            count = ShopSystem.get_inventory_count(self.state, item["id"])
+            detail = f"剩余：{count} | {item['desc']}"
             if reason:
                 detail = f"{detail} | {reason}"
-            self._add_card(layout, name, detail, button_text, enabled, is_premium)
+            self._add_card(layout, item["name"], detail, button_text, enabled, item["id"])
 
         self._add_cancel(layout)
 
@@ -181,11 +194,22 @@ class PlayDialog(OptionDialog):
         can_play, reason = GameRules.can_use_toy(self.state)
         if reason.startswith("没有玩具"):
             reason = ""
-        enabled = can_play and self.state.toy_count > 0
-        button_text = "玩耍" if enabled else ("无法玩耍" if reason else "无库存")
-        detail = f"剩余：{self.state.toy_count} | 效果：心情 +20"
-        if reason:
-            detail = f"{detail} | {reason}"
-        self._add_card(layout, "玩具", detail, button_text, enabled, "toy")
+        toy_items = [
+            item for item in ShopSystem.get_items_by_type("toy")
+            if ShopSystem.get_inventory_count(self.state, item["id"]) > 0
+        ]
+        if not toy_items:
+            self._add_empty_message(layout, "没有玩具了")
+            self._add_cancel(layout)
+            return
+
+        for item in toy_items:
+            enabled = can_play
+            button_text = "玩耍" if enabled else "无法玩耍"
+            count = ShopSystem.get_inventory_count(self.state, item["id"])
+            detail = f"剩余：{count} | {item['desc']}"
+            if reason:
+                detail = f"{detail} | {reason}"
+            self._add_card(layout, item["name"], detail, button_text, enabled, item["id"])
 
         self._add_cancel(layout)

@@ -125,9 +125,24 @@ class PetWindow(QMainWindow):
             elif state.status == PetStatus.SLEEPING:
                 mood_cost = 0
                 satiety_cost = 0.2
+            if state.mood_decay_buff_remaining_seconds > 0:
+                mood_cost *= 1 - state.mood_decay_buff_rate
+            if state.satiety_decay_buff_remaining_seconds > 0:
+                satiety_cost *= 1 - state.satiety_decay_buff_rate
             state.mood = max(0, state.mood - mood_cost)
             state.satiety = max(0, state.satiety - satiety_cost)
             should_save = should_save or state.mood != old_mood or state.satiety != old_satiety
+
+        if state.satiety_decay_buff_remaining_seconds > 0:
+            state.satiety_decay_buff_remaining_seconds -= 1
+            if state.satiety_decay_buff_remaining_seconds == 0:
+                state.satiety_decay_buff_rate = 0
+                should_save = True
+        if state.mood_decay_buff_remaining_seconds > 0:
+            state.mood_decay_buff_remaining_seconds -= 1
+            if state.mood_decay_buff_remaining_seconds == 0:
+                state.mood_decay_buff_rate = 0
+                should_save = True
 
         # Happy 计时器
         if state.happy_timer > 0:
@@ -398,18 +413,8 @@ class PetWindow(QMainWindow):
 
     # ========== 动作处理 ==========
 
-    def _feed_normal(self):
-        ok, msg = ShopSystem.use_food(self.state, is_premium=False)
-        if ok:
-            self.state.happy_timer = 3
-            GameRules.update_status(self.state)
-            self._update_frame()
-            self.save_manager.save(self.state)
-        self._show_tip(msg)
-        self.update()
-
-    def _feed_premium(self):
-        ok, msg = ShopSystem.use_food(self.state, is_premium=True)
+    def _feed(self, item_id: str):
+        ok, msg = ShopSystem.use_food(self.state, item_id)
         if ok:
             self.state.happy_timer = 3
             GameRules.update_status(self.state)
@@ -446,8 +451,8 @@ class PetWindow(QMainWindow):
         self._show_tip(f"开始睡觉：{option_name}")
         self.update()
 
-    def _use_toy(self):
-        ok, msg = ShopSystem.use_toy(self.state)
+    def _use_toy(self, item_id: str):
+        ok, msg = ShopSystem.use_toy(self.state, item_id)
         if ok:
             self.state.happy_timer = 3
             GameRules.update_status(self.state)
@@ -460,10 +465,7 @@ class PetWindow(QMainWindow):
         from .interaction_dialogs import FeedDialog
         dlg = FeedDialog(self.state, self)
         if dlg.exec() and dlg.selected_option is not None:
-            if dlg.selected_option:
-                self._feed_premium()
-            else:
-                self._feed_normal()
+            self._feed(dlg.selected_option)
 
     def _open_study_dialog(self):
         from .interaction_dialogs import StudyDialog
@@ -481,7 +483,7 @@ class PetWindow(QMainWindow):
         from .interaction_dialogs import PlayDialog
         dlg = PlayDialog(self.state, self)
         if dlg.exec() and dlg.selected_option:
-            self._use_toy()
+            self._use_toy(dlg.selected_option)
 
     def _open_work_dialog(self):
         from .work_dialog import WorkDialog

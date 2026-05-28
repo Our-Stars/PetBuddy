@@ -2,6 +2,7 @@
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QLabel, QPushButton, QHBoxLayout, QFrame, QScrollArea, QWidget,
+    QTabWidget,
 )
 from PySide6.QtCore import Qt
 from core.game_state import GameState
@@ -59,24 +60,29 @@ class ShopDialog(QDialog):
         self.lbl_coins.setStyleSheet("font-size: 16px; font-weight: bold; margin: 8px;")
         layout.addWidget(self.lbl_coins)
 
-        # 商品列表
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setFrameShape(QFrame.NoFrame)
-        container = QWidget()
-        container_layout = QVBoxLayout(container)
-
-        for item in ShopSystem.get_items():
-            container_layout.addWidget(self._create_item_card(item))
-
-        scroll.setWidget(container)
-        layout.addWidget(scroll)
+        tabs = QTabWidget()
+        tabs.addTab(self._create_tab("food"), "食物")
+        tabs.addTab(self._create_tab("toy"), "玩具")
+        layout.addWidget(tabs)
 
         btn_close = QPushButton("关闭")
         btn_close.clicked.connect(self.accept)
         layout.addWidget(btn_close)
 
         self._refresh()
+
+    def _create_tab(self, item_type: str) -> QScrollArea:
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.NoFrame)
+        container = QWidget()
+        container_layout = QVBoxLayout(container)
+
+        for item in ShopSystem.get_items_by_type(item_type):
+            container_layout.addWidget(self._create_item_card(item))
+
+        scroll.setWidget(container)
+        return scroll
 
     def _create_item_card(self, item: dict) -> QFrame:
         card = QFrame()
@@ -99,7 +105,7 @@ class ShopDialog(QDialog):
         return card
 
     def _buy(self, item: dict):
-        ok, msg = ShopSystem.buy(self.state, item["name"])
+        ok, msg = ShopSystem.buy(self.state, item["id"])
         if ok:
             if self.save_manager is not None:
                 self.save_manager.save(self.state)

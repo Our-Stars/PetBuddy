@@ -21,7 +21,7 @@ The app is fully local. It does not use accounts, online services, or a database
 - Study tasks: 5 / 15 / 40 minutes for 1 / 3.5 / 10 knowledge
 - Work tasks unlocked by knowledge level
 - Sleep tasks: 5 / 15 / 40 minutes with mood recovery
-- Shop items: normal food, premium food, toy, and bed upgrade
+- Shop pages for food and toys, with multiple items and fixed-duration buffs
 - Local autosave and task remaining-time persistence
 - Configurable pet size, always-on-top mode, and status text
 - Bubble tips, click mood gain, and click happy animation are always enabled; quiet mode is always off and is not user-configurable
@@ -59,6 +59,7 @@ python main.py
 | Click interaction | 10-second cooldown, mood +3 |
 | Study | 5 / 15 / 40 minutes, knowledge +1 / +3.5 / +10 |
 | Sleep | 5 / 15 / 40 minutes, mood +5 / +18 / +50 |
+| Buffs | Higher-tier food can slow satiety decay, and higher-tier toys can slow mood decay; buff duration is fixed by item |
 
 ### Mood Multiplier
 
@@ -81,12 +82,24 @@ python main.py
 
 ## Shop
 
-| Item | Price | Effect |
+The shop is split into Food and Toys pages.
+
+| Food | Price | Effect |
 | --- | ---: | --- |
-| Normal Food | 20 | Satiety +20 |
-| Premium Food | 50 | Satiety +50, mood +5 |
-| Toy | 20 | Mood +20 |
-| Bed Upgrade | 200 | Bed level +1 |
+| Bread | 15 | Satiety +18 |
+| Milk | 25 | Satiety +25, mood +2 |
+| Cola | 30 | Satiety +8, mood +12 |
+| Lollipop | 35 | Satiety +5, mood +18 |
+| Cat Meal | 70 | Satiety +65, mood +6; satiety decay -20% for 20 minutes |
+| Deluxe Cat Can | 130 | Satiety +95, mood +12; satiety decay -35% for 40 minutes |
+
+| Toy | Price | Effect |
+| --- | ---: | --- |
+| Paper Ball | 10 | Mood +8 |
+| Teaser Wand | 25 | Mood +22 |
+| Scratching Board | 55 | Mood +40; mood decay -15% for 15 minutes |
+| Yarn Ball | 75 | Mood +52; mood decay -20% for 20 minutes |
+| Cat Tree | 150 | Mood +85; mood decay -35% for 40 minutes |
 
 ## Save Data
 
