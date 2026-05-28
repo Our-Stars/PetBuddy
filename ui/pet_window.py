@@ -354,6 +354,10 @@ class PetWindow(QMainWindow):
         feed_action = menu.addAction("喂食")
         feed_action.triggered.connect(self._open_feed_dialog)
 
+        # 玩耍
+        play_action = menu.addAction("玩耍")
+        play_action.triggered.connect(self._open_play_dialog)
+
         # 学习
         study_action = menu.addAction("学习")
         study_action.triggered.connect(self._open_study_dialog)
@@ -366,10 +370,6 @@ class PetWindow(QMainWindow):
         sleep_action = menu.addAction("睡觉")
         sleep_action.triggered.connect(self._open_sleep_dialog)
 
-        # 玩耍
-        play_action = menu.addAction("玩耍")
-        play_action.triggered.connect(self._open_play_dialog)
-
         if self.state.status in (PetStatus.STUDYING, PetStatus.WORKING, PetStatus.SLEEPING):
             cancel_task_action = menu.addAction("停止当前任务")
             cancel_task_action.triggered.connect(self._cancel_current_task)
@@ -377,11 +377,11 @@ class PetWindow(QMainWindow):
         menu.addSeparator()
 
         # 商店
-        shop_action = menu.addAction("打开商店")
+        shop_action = menu.addAction("商店")
         shop_action.triggered.connect(self._open_shop)
 
         # 状态面板
-        status_action = menu.addAction("查看状态")
+        status_action = menu.addAction("状态")
         status_action.triggered.connect(self._open_status)
 
         # 设置
