@@ -12,18 +12,10 @@ def get_base_dir() -> str:
     """获取资源基准目录。
 
     开发时：main.py 所在目录
-    打包后：
-      - macOS .app：Contents/Resources/（assets 被 PyInstaller 放在这里）
-      - 其他平台：可执行文件所在目录
+    打包后：PyInstaller 的 _MEIPASS 临时解压目录
     """
     if getattr(sys, "frozen", False):
-        exe_dir = os.path.dirname(sys.executable)
-        if sys.platform == "darwin":
-            contents_dir = os.path.dirname(exe_dir)
-            resources_dir = os.path.join(contents_dir, "Resources")
-            if os.path.isdir(resources_dir):
-                return resources_dir
-        return exe_dir
+        return sys._MEIPASS
     return os.path.dirname(os.path.abspath(__file__))
 
 
