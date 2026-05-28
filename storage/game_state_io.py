@@ -23,10 +23,10 @@ def game_state_to_dict(state: GameState) -> dict:
         "pet_size": state.pet_size.value,
         "always_on_top": state.always_on_top,
         "show_status_text": state.show_status_text,
-        "bubble_tips_enabled": state.bubble_tips_enabled,
-        "click_mood_enabled": state.click_mood_enabled,
-        "click_animation_enabled": state.click_animation_enabled,
-        "quiet_mode": state.quiet_mode,
+        "bubble_tips_enabled": True,
+        "click_mood_enabled": True,
+        "click_animation_enabled": True,
+        "quiet_mode": False,
         "last_saved_time": state.last_saved_time,
     }
 
@@ -62,10 +62,10 @@ def dict_to_game_state(data: dict) -> GameState:
         pet_size=pet_size,
         always_on_top=data.get("always_on_top", True),
         show_status_text=data.get("show_status_text", False),
-        bubble_tips_enabled=data.get("bubble_tips_enabled", True),
-        click_mood_enabled=data.get("click_mood_enabled", True),
-        click_animation_enabled=data.get("click_animation_enabled", True),
-        quiet_mode=data.get("quiet_mode", False),
+        bubble_tips_enabled=True,
+        click_mood_enabled=True,
+        click_animation_enabled=True,
+        quiet_mode=False,
         last_saved_time=data.get("last_saved_time", ""),
     )
     state.clamp_values()

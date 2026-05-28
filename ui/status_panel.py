@@ -104,8 +104,7 @@ class StatusPanel(QDialog):
     def _feed(self, is_premium: bool):
         ok, msg = ShopSystem.use_food(self.state, is_premium=is_premium)
         if ok:
-            if self.state.click_animation_enabled and not self.state.quiet_mode:
-                self.state.happy_timer = 3
+            self.state.happy_timer = 3
             GameRules.update_status(self.state)
             if self.save_manager is not None:
                 self.save_manager.save(self.state)

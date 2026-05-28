@@ -328,24 +328,19 @@ class PetWindow(QMainWindow):
 
         import time
         self.state.last_click_time = time.time()
-        if self.state.click_mood_enabled:
-            self.state.mood = min(100, self.state.mood + 3)
+        self.state.mood = min(100, self.state.mood + 3)
         if (
-            self.state.click_animation_enabled
-            and not self.state.quiet_mode
-            and self.state.status not in (PetStatus.STUDYING, PetStatus.WORKING, PetStatus.SLEEPING)
+            self.state.status not in (PetStatus.STUDYING, PetStatus.WORKING, PetStatus.SLEEPING)
         ):
             self.state.happy_timer = 3  # 开心 3 秒
             self.state.status = PetStatus.HAPPY
         GameRules.update_status(self.state)
         self._update_frame()
         self.save_manager.save(self.state)
-        self._show_tip("心情 +3" if self.state.click_mood_enabled else "已互动")
+        self._show_tip("心情 +3")
         self.update()
 
     def _show_tip(self, message: str):
-        if self.state.quiet_mode or not self.state.bubble_tips_enabled:
-            return
         QToolTip.showText(self.mapToGlobal(QPoint(self.width() // 2, 0)), message, self)
 
     def contextMenuEvent(self, event):
@@ -432,8 +427,7 @@ class PetWindow(QMainWindow):
     def _feed_normal(self):
         ok, msg = ShopSystem.use_food(self.state, is_premium=False)
         if ok:
-            if self.state.click_animation_enabled and not self.state.quiet_mode:
-                self.state.happy_timer = 3
+            self.state.happy_timer = 3
             GameRules.update_status(self.state)
             self._update_frame()
             self.save_manager.save(self.state)
@@ -443,8 +437,7 @@ class PetWindow(QMainWindow):
     def _feed_premium(self):
         ok, msg = ShopSystem.use_food(self.state, is_premium=True)
         if ok:
-            if self.state.click_animation_enabled and not self.state.quiet_mode:
-                self.state.happy_timer = 3
+            self.state.happy_timer = 3
             GameRules.update_status(self.state)
             self._update_frame()
             self.save_manager.save(self.state)
@@ -479,8 +472,7 @@ class PetWindow(QMainWindow):
     def _use_toy(self):
         ok, msg = ShopSystem.use_toy(self.state)
         if ok:
-            if self.state.click_animation_enabled and not self.state.quiet_mode:
-                self.state.happy_timer = 3
+            self.state.happy_timer = 3
             GameRules.update_status(self.state)
             self._update_frame()
             self.save_manager.save(self.state)

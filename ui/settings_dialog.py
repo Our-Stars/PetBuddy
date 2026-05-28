@@ -36,11 +36,6 @@ class SettingsDialog(QDialog):
         self.chk_status_text.toggled.connect(lambda v: self._set_and_save("show_status_text", v))
         display_form.addRow("状态文字：", self.chk_status_text)
 
-        self.chk_bubble = QCheckBox("启用气泡提示")
-        self.chk_bubble.setChecked(self.state.bubble_tips_enabled)
-        self.chk_bubble.toggled.connect(lambda v: self._set_and_save("bubble_tips_enabled", v))
-        display_form.addRow("气泡提示：", self.chk_bubble)
-
         self.cmb_size = QComboBox()
         self.cmb_size.addItems(["小", "中", "大"])
         size_map = {PetSize.SMALL: 0, PetSize.MEDIUM: 1, PetSize.LARGE: 2}
@@ -50,28 +45,6 @@ class SettingsDialog(QDialog):
 
         display_group.setLayout(display_form)
         layout.addWidget(display_group)
-
-        # 交互设置
-        interact_group = QGroupBox("交互设置")
-        interact_form = QFormLayout()
-
-        self.chk_click_mood = QCheckBox("点击增加心情")
-        self.chk_click_mood.setChecked(self.state.click_mood_enabled)
-        self.chk_click_mood.toggled.connect(lambda v: self._set_and_save("click_mood_enabled", v))
-        interact_form.addRow(self.chk_click_mood)
-
-        self.chk_click_animation = QCheckBox("显示点击动画")
-        self.chk_click_animation.setChecked(self.state.click_animation_enabled)
-        self.chk_click_animation.toggled.connect(lambda v: self._set_and_save("click_animation_enabled", v))
-        interact_form.addRow(self.chk_click_animation)
-
-        self.chk_quiet = QCheckBox("安静模式（减少提示和动画）")
-        self.chk_quiet.setChecked(self.state.quiet_mode)
-        self.chk_quiet.toggled.connect(lambda v: self._set_and_save("quiet_mode", v))
-        interact_form.addRow(self.chk_quiet)
-
-        interact_group.setLayout(interact_form)
-        layout.addWidget(interact_group)
 
         # 存档设置
         save_group = QGroupBox("存档设置")
@@ -84,11 +57,6 @@ class SettingsDialog(QDialog):
 
         save_group.setLayout(save_layout)
         layout.addWidget(save_group)
-
-        # 关闭按钮
-        btn_close = QPushButton("关闭")
-        btn_close.clicked.connect(self.accept)
-        layout.addWidget(btn_close)
 
     def _on_size_changed(self, index: int):
         size_map = {0: PetSize.SMALL, 1: PetSize.MEDIUM, 2: PetSize.LARGE}
@@ -120,9 +88,5 @@ class SettingsDialog(QDialog):
             self.state.__dict__.update(new_state.__dict__)
             self.chk_top.setChecked(True)
             self.chk_status_text.setChecked(False)
-            self.chk_bubble.setChecked(True)
             self.cmb_size.setCurrentIndex(1)
-            self.chk_click_mood.setChecked(True)
-            self.chk_click_animation.setChecked(True)
-            self.chk_quiet.setChecked(False)
             self._save_and_apply()

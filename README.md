@@ -21,7 +21,8 @@ The app is fully local. It does not use accounts, online services, or a database
 - Sleep tasks: 5 / 15 / 40 minutes with mood recovery
 - Shop items: normal food, premium food, toy, and bed upgrade
 - Local autosave and task remaining-time persistence
-- Configurable pet size, always-on-top mode, bubble tips, click animation, and quiet mode
+- Configurable pet size, always-on-top mode, and status text
+- Bubble tips, click mood gain, and click happy animation are always enabled; quiet mode is always off and is not user-configurable
 
 ## Requirements
 
