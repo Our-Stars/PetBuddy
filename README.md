@@ -17,7 +17,7 @@ The app is fully local. It does not use accounts, online services, or a database
 - Click interaction with mood gain
 - Context menu for feeding, studying, working, sleeping, playing, shop, status, and settings
 - Feeding, studying, working, sleeping, and playing all open a choice dialog before execution
-- Unified light theme for choice dialogs, shop, status, settings, and the context menu
+- Warm pet-themed palette (orange/brown tones) for choice dialogs, shop, status, settings, and the context menu
 - Live status panel refresh for task remaining time and active buff timers
 - Feeding, playing, and click interactions are unavailable while studying, working, or sleeping
 - Study tasks: 5 / 15 / 40 minutes for 1 / 3.5 / 10 knowledge
@@ -78,13 +78,15 @@ On first launch without an existing save, the pet starts with 0 coins, 0 knowled
 
 ## Jobs
 
-| Job | Required Knowledge | Duration | Coins |
-| --- | ---: | ---: | ---: |
-| Bottle Collector | 0 | 1 min | 20 |
-| Flyer Distributor | 10 | 3 min | 100 |
-| Cafe Helper | 30 | 5 min | 220 |
-| Pet Programmer | 60 | 10 min | 520 |
-| Mystery Consultant | 120 | 20 min | 1200 |
+Each job offers multiple duration options. Longer durations have slightly higher hourly rates.
+
+| Job | Required Knowledge | Duration | Coins | Rate (G/min) |
+| --- | ---: | ---: | ---: | ---: |
+| Bottle Collector | 0 | 5 / 15 min | 20 / 65 | 4.0 / 4.3 |
+| Flyer Distributor | 10 | 5 / 15 / 30 min | 40 / 130 / 275 | 8.0 / 8.7 / 9.2 |
+| Cafe Helper | 30 | 10 / 30 min | 100 / 330 | 10.0 / 11.0 |
+| Pet Programmer | 60 | 15 / 30 / 60 min | 180 / 380 / 800 | 12.0 / 12.7 / 13.3 |
+| Mystery Consultant | 120 | 20 / 40 / 60 min | 270 / 570 / 900 | 13.5 / 14.3 / 15.0 |
 
 ## Shop
 
@@ -115,7 +117,7 @@ During development runs, save files are stored in the `saves/` directory under t
 
 PetBuddy uses static pet images from `assets/Original static image/` for each pet state. The main window draws overlays such as status text and task progress with `QPainter`.
 
-Most modal UI uses the shared light theme in `ui/dialog_styles.py`, including choice dialogs, the shop, status, settings, and the right-click context menu. The status panel keeps refreshing while it is open, so remaining task time and buff timers stay current.
+Most modal UI uses the shared warm pet-themed palette in `ui/dialog_styles.py`, including choice dialogs, the shop, status, settings, and the right-click context menu. The status panel keeps refreshing while it is open, so remaining task time and buff timers stay current.
 
 ## Packaging
 
