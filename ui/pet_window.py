@@ -502,6 +502,9 @@ class PetWindow(QMainWindow):
                 self.update()
 
     def _cancel_current_task(self):
+        from .interaction_dialogs import ConfirmDialog
+        if not ConfirmDialog.ask("确认停止", "提前停止任务不会获得任何收益，确定要停止吗？", self):
+            return
         ok, msg = TaskSystem.cancel_current_task(self.state)
         if ok:
             self._update_frame()
@@ -537,6 +540,10 @@ class PetWindow(QMainWindow):
     # ========== 生命周期 ==========
 
     def closeEvent(self, event):
+        from .interaction_dialogs import ConfirmDialog
+        if not ConfirmDialog.ask("确认退出", "确定要退出程序吗？", self):
+            event.ignore()
+            return
         self.save_manager.save(self.state)
         super().closeEvent(event)
         QApplication.quit()

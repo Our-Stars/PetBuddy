@@ -202,3 +202,54 @@ class PlayDialog(OptionDialog):
             self._add_card(layout, item["name"], detail, button_text, enabled, item["id"])
 
         self._add_cancel(layout)
+
+
+class ConfirmDialog(QDialog):
+    """通用确认对话框，复用 DIALOG_STYLE 风格"""
+
+    def __init__(self, title: str, message: str, parent=None):
+        super().__init__(parent)
+        self._confirmed = False
+        self.setWindowTitle(title)
+        self.setMinimumWidth(320)
+        self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
+        self.setStyleSheet(DIALOG_STYLE)
+        self._init_ui(message)
+
+    def _init_ui(self, message: str):
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(18, 18, 18, 18)
+        layout.setSpacing(14)
+
+        lbl = QLabel(message)
+        lbl.setObjectName("summaryLabel")
+        lbl.setWordWrap(True)
+        lbl.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        layout.addWidget(lbl)
+
+        btn_layout = QHBoxLayout()
+        btn_layout.setSpacing(10)
+
+        btn_cancel = QPushButton("取消")
+        btn_cancel.setObjectName("secondaryButton")
+        btn_cancel.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        btn_cancel.clicked.connect(self.reject)
+        btn_layout.addWidget(btn_cancel)
+
+        btn_confirm = QPushButton("确定")
+        btn_confirm.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        btn_confirm.clicked.connect(self._confirm)
+        btn_layout.addWidget(btn_confirm)
+
+        layout.addStretch()
+        layout.addLayout(btn_layout)
+
+    def _confirm(self):
+        self._confirmed = True
+        self.accept()
+
+    @staticmethod
+    def ask(title: str, message: str, parent=None) -> bool:
+        dlg = ConfirmDialog(title, message, parent)
+        dlg.exec()
+        return dlg._confirmed
