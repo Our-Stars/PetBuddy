@@ -251,9 +251,9 @@ class PetWindow(QMainWindow):
             if sleep_option:
                 total = sleep_option["duration"]
         elif s.status == PetStatus.WORKING:
-            job = TaskSystem.get_job_by_name(s.current_task)
-            if job:
-                total = job["duration"]
+            option = TaskSystem.get_job_option_by_name(s.current_task)
+            if option:
+                total = option["duration"]
         if total <= 0:
             return
 
@@ -495,9 +495,7 @@ class PetWindow(QMainWindow):
             if not can:
                 self._show_tip(msg)
                 return
-            job = TaskSystem.get_job_by_name(dlg.selected_job)
-            if job and self.state.knowledge >= job["knowledge"]:
-                TaskSystem.start_work(self.state, dlg.selected_job)
+            if TaskSystem.start_work(self.state, dlg.selected_job):
                 self._update_frame()
                 self.save_manager.save(self.state)
                 self._show_tip(f"开始工作：{dlg.selected_job}")

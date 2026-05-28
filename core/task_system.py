@@ -22,14 +22,61 @@ SLEEP_OPTIONS = [
 DEFAULT_SLEEP_NAME = SLEEP_OPTIONS[0]["name"]
 LEGACY_SLEEP_NAME = "睡觉"
 
-# 工作列表
+# 工作列表（每个工种包含多个时长档位，长档位时薪略高）
 JOBS = [
-    {"name": "捡瓶子", "knowledge": 0, "duration": 60, "reward": 20},
-    {"name": "发传单", "knowledge": 10, "duration": 180, "reward": 100},
-    {"name": "咖啡店帮工", "knowledge": 30, "duration": 300, "reward": 220},
-    {"name": "程序员宠物", "knowledge": 60, "duration": 600, "reward": 520},
-    {"name": "神秘顾问", "knowledge": 120, "duration": 1200, "reward": 1200},
+    {
+        "name": "捡瓶子",
+        "knowledge": 0,
+        "options": [
+            {"label": "捡瓶子 5分钟", "duration": 300, "reward": 20},
+            {"label": "捡瓶子 15分钟", "duration": 900, "reward": 65},
+        ],
+    },
+    {
+        "name": "发传单",
+        "knowledge": 10,
+        "options": [
+            {"label": "发传单 5分钟", "duration": 300, "reward": 40},
+            {"label": "发传单 15分钟", "duration": 900, "reward": 130},
+            {"label": "发传单 30分钟", "duration": 1800, "reward": 275},
+        ],
+    },
+    {
+        "name": "咖啡店帮工",
+        "knowledge": 30,
+        "options": [
+            {"label": "咖啡店帮工 10分钟", "duration": 600, "reward": 100},
+            {"label": "咖啡店帮工 30分钟", "duration": 1800, "reward": 330},
+        ],
+    },
+    {
+        "name": "程序员宠物",
+        "knowledge": 60,
+        "options": [
+            {"label": "程序员宠物 15分钟", "duration": 900, "reward": 180},
+            {"label": "程序员宠物 30分钟", "duration": 1800, "reward": 380},
+            {"label": "程序员宠物 60分钟", "duration": 3600, "reward": 800},
+        ],
+    },
+    {
+        "name": "神秘顾问",
+        "knowledge": 120,
+        "options": [
+            {"label": "神秘顾问 20分钟", "duration": 1200, "reward": 270},
+            {"label": "神秘顾问 40分钟", "duration": 2400, "reward": 570},
+            {"label": "神秘顾问 60分钟", "duration": 3600, "reward": 900},
+        ],
+    },
 ]
+
+# 旧存档兼容：旧版 task name → 新版默认档位
+LEGACY_JOB_NAME_MAP = {
+    "捡瓶子": "捡瓶子 5分钟",
+    "发传单": "发传单 5分钟",
+    "咖啡店帮工": "咖啡店帮工 10分钟",
+    "程序员宠物": "程序员宠物 15分钟",
+    "神秘顾问": "神秘顾问 20分钟",
+}
 
 
 class TaskSystem:
@@ -39,10 +86,21 @@ class TaskSystem:
         return [j for j in JOBS if j["knowledge"] <= knowledge]
 
     @staticmethod
+    def get_job_option_by_name(name: str) -> dict | None:
+        """根据选项标签或旧版工种名查找工作选项；兼容旧存档。"""
+        name = LEGACY_JOB_NAME_MAP.get(name, name)
+        for job in JOBS:
+            for opt in job["options"]:
+                if opt["label"] == name:
+                    return opt
+        return None
+
+    @staticmethod
     def get_job_by_name(name: str) -> dict | None:
-        for j in JOBS:
-            if j["name"] == name:
-                return j
+        """根据工种名查找工种配置（保留兼容，用于获取 knowledge 等字段）。"""
+        for job in JOBS:
+            if job["name"] == name:
+                return job
         return None
 
     @staticmethod
@@ -79,20 +137,24 @@ class TaskSystem:
         return True
 
     @staticmethod
-    def start_work(state: GameState, job_name: str) -> bool:
-        """开始工作，返回是否成功"""
+    def start_work(state: GameState, option_label: str) -> bool:
+        """开始工作，返回是否成功。option_label 为档位标签如「捡瓶子 5分钟」。"""
         from .game_rules import GameRules
         can_start, _ = GameRules.can_work(state)
         if not can_start:
             return False
-        job = TaskSystem.get_job_by_name(job_name)
-        if job is None:
+        option = TaskSystem.get_job_option_by_name(option_label)
+        if option is None:
             return False
-        if state.knowledge < job["knowledge"]:
-            return False
+        # 查找所属工种，检查学识要求
+        for job in JOBS:
+            if any(opt["label"] == option["label"] for opt in job["options"]):
+                if state.knowledge < job["knowledge"]:
+                    return False
+                break
         state.status = PetStatus.WORKING
-        state.current_task = job_name
-        state.task_remaining_seconds = job["duration"]
+        state.current_task = option["label"]
+        state.task_remaining_seconds = option["duration"]
         return True
 
     @staticmethod
@@ -159,9 +221,9 @@ class TaskSystem:
             result["type"] = "study"
             result["message"] = f"学习完成！学识 +{gain:g}"
         elif state.status == PetStatus.WORKING:
-            job = TaskSystem.get_job_by_name(state.current_task)
-            if job:
-                reward = job["reward"]
+            option = TaskSystem.get_job_option_by_name(state.current_task)
+            if option:
+                reward = option["reward"]
                 state.coins += reward
                 result["type"] = "work"
                 result["message"] = f"工作完成：{state.current_task}！获得 {reward} 金币"
