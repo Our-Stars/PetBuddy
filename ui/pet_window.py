@@ -436,7 +436,7 @@ class PetWindow(QMainWindow):
             return
         self._update_frame()
         self.save_manager.save(self.state)
-        self._show_tip(f"开始学习：{option_name}")
+        self._show_tip("开始任务")
         self.update()
 
     def _start_sleep(self, option_name: str):
@@ -450,7 +450,7 @@ class PetWindow(QMainWindow):
             return
         self._update_frame()
         self.save_manager.save(self.state)
-        self._show_tip(f"开始睡觉：{option_name}")
+        self._show_tip("开始任务")
         self.update()
 
     def _use_toy(self, item_id: str):
@@ -498,7 +498,7 @@ class PetWindow(QMainWindow):
             if TaskSystem.start_work(self.state, dlg.selected_job):
                 self._update_frame()
                 self.save_manager.save(self.state)
-                self._show_tip(f"开始工作：{dlg.selected_job}")
+                self._show_tip("开始任务")
                 self.update()
 
     def _cancel_current_task(self):

@@ -57,7 +57,7 @@ class WorkDialog(QDialog):
 
     def _build_cards(self):
         can_work, reason = GameRules.can_work(self.state)
-        self.lbl_knowledge.setText(f"当前学识：{self.state.knowledge}")
+        self.lbl_knowledge.setText(f"当前学识：{self.state.knowledge:.1f}")
         self.lbl_reason.setText("" if can_work else reason)
 
         for job in JOBS:

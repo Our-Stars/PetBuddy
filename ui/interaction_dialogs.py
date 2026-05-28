@@ -134,7 +134,7 @@ class StudyDialog(OptionDialog):
 
     def _init_ui(self):
         layout = self._create_layout()
-        self._add_summary(layout, f"当前学识：{self.state.knowledge:g} | 当前饱食：{self.state.satiety:.1f}")
+        self._add_summary(layout, f"当前学识：{self.state.knowledge:.1f} | 当前饱食：{self.state.satiety:.1f}")
 
         can_study, reason = GameRules.can_study(self.state)
         for option in STUDY_OPTIONS:

@@ -103,11 +103,6 @@ LEGACY_JOB_NAME_MAP = {
 
 class TaskSystem:
     @staticmethod
-    def get_available_jobs(knowledge: int) -> list[dict]:
-        """返回学识要求 <= 当前学识的工作列表（按学识要求升序）"""
-        return [j for j in JOBS if j["knowledge"] <= knowledge]
-
-    @staticmethod
     def get_job_option_by_name(name: str) -> dict | None:
         """根据选项标签或旧版工种名查找工作选项；兼容旧存档。"""
         name = LEGACY_JOB_NAME_MAP.get(name, name)
@@ -215,7 +210,7 @@ class TaskSystem:
 
         from .game_rules import GameRules
         GameRules.update_status(state)
-        return True, f"已停止任务：{task_name}"
+        return True, "已停止任务"
 
     @staticmethod
     def tick(state: GameState):
